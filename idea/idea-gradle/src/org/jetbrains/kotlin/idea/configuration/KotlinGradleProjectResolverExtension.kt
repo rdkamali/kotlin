@@ -26,15 +26,18 @@ import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.io.FileUtil
 import org.gradle.api.artifacts.Dependency
 import org.gradle.tooling.model.idea.IdeaModule
+import org.jetbrains.kotlin.caching.CachedCompilerArgumentBySourceSet
+import org.jetbrains.kotlin.caching.CompilerArgumentMappersContainer
+import org.jetbrains.kotlin.caching.deepCopy
 import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.idea.inspections.gradle.getDependencyModules
+import org.jetbrains.kotlin.idea.statistics.FUSEventGroups
+import org.jetbrains.kotlin.idea.statistics.KotlinFUSLogger
+import org.jetbrains.kotlin.idea.statistics.KotlinGradleFUSLogger
 import org.jetbrains.kotlin.idea.util.CopyableDataNodeUserDataProperty
 import org.jetbrains.kotlin.idea.util.DataNodeUserDataProperty
 import org.jetbrains.kotlin.idea.util.NotNullableCopyableDataNodeUserDataProperty
 import org.jetbrains.kotlin.idea.util.PsiPrecedences
-import org.jetbrains.kotlin.idea.statistics.FUSEventGroups
-import org.jetbrains.kotlin.idea.statistics.KotlinFUSLogger
-import org.jetbrains.kotlin.idea.statistics.KotlinGradleFUSLogger
 import org.jetbrains.plugins.gradle.model.ExternalProjectDependency
 import org.jetbrains.plugins.gradle.model.ExternalSourceSet
 import org.jetbrains.plugins.gradle.model.FileCollectionDependency
@@ -50,8 +53,8 @@ var DataNode<ModuleData>.isResolved
         by NotNullableCopyableDataNodeUserDataProperty(Key.create<Boolean>("IS_RESOLVED"), false)
 var DataNode<ModuleData>.hasKotlinPlugin
         by NotNullableCopyableDataNodeUserDataProperty(Key.create<Boolean>("HAS_KOTLIN_PLUGIN"), false)
-var DataNode<ModuleData>.compilerArgumentsBySourceSet
-        by CopyableDataNodeUserDataProperty(Key.create<CompilerArgumentsBySourceSet>("CURRENT_COMPILER_ARGUMENTS"))
+var DataNode<ModuleData>.cachedCompilerArgumentsBySourceSet
+        by CopyableDataNodeUserDataProperty(Key.create<CachedCompilerArgumentBySourceSet>("CACHED_COMPILER_ARGUMENTS"))
 var DataNode<ModuleData>.coroutines
         by CopyableDataNodeUserDataProperty(Key.create<String>("KOTLIN_COROUTINES"))
 var DataNode<out ModuleData>.isHmpp
@@ -62,6 +65,7 @@ var DataNode<ModuleData>.kotlinNativeHome
         by CopyableDataNodeUserDataProperty(Key.create<String>("KOTLIN_NATIVE_HOME"))
 var DataNode<out ModuleData>.implementedModuleNames
         by NotNullableCopyableDataNodeUserDataProperty(Key.create<List<String>>("IMPLEMENTED_MODULE_NAME"), emptyList())
+
 // Project is usually the same during all import, thus keeping Map Project->Dependencies makes model a bit more complicated but allows to avoid future problems
 var DataNode<out ModuleData>.dependenciesCache
         by DataNodeUserDataProperty(
@@ -69,6 +73,8 @@ var DataNode<out ModuleData>.dependenciesCache
         )
 var DataNode<out ModuleData>.pureKotlinSourceFolders
         by NotNullableCopyableDataNodeUserDataProperty(Key.create<List<String>>("PURE_KOTLIN_SOURCE_FOLDER"), emptyList())
+var DataNode<ProjectData>.projectCompilerArgumentMapperContainer
+        by NotNullableCopyableDataNodeUserDataProperty(Key.create("COMPILER_ARGUMENT_MAPPER_CONTAINER"), CompilerArgumentMappersContainer())
 
 
 class KotlinGradleProjectResolverExtension : AbstractProjectResolverExtension() {
@@ -230,9 +236,13 @@ class KotlinGradleProjectResolverExtension : AbstractProjectResolverExtension() 
 
         ideModule.isResolved = true
         ideModule.hasKotlinPlugin = gradleModel.hasKotlinPlugin
-        ideModule.compilerArgumentsBySourceSet = gradleModel.compilerArgumentsBySourceSet.deepCopy()
+        ideModule.cachedCompilerArgumentsBySourceSet = gradleModel.cachedCompilerArgumentsBySourceSet.deepCopy()
         ideModule.coroutines = gradleModel.coroutines
         ideModule.platformPluginId = gradleModel.platformPluginId
+        with(gradleModel.compilerArgumentsMapper) {
+            ideProject.projectCompilerArgumentMapperContainer.mergeArgumentsFromMapper(this)
+            clear()
+        }
 
         if (gradleModel.hasKotlinPlugin) {
             KotlinFUSLogger.log(FUSEventGroups.GradleTarget, gradleModel.kotlinTarget ?: "unknown")
@@ -311,7 +321,7 @@ class KotlinGradleProjectResolverExtension : AbstractProjectResolverExtension() 
                     gradleModel.kotlinTaskProperties.filter { (k, v) -> gradleSourceSetNode.data.id == "$moduleNamePrefix:$k" }
                         .toList().singleOrNull()
                 gradleSourceSetNode.children.forEach { dataNode ->
-                    val data = dataNode.data as?  ContentRootData
+                    val data = dataNode.data as? ContentRootData
                     if (data != null) {
                         /*
                         Code snippet for setting in content root properties

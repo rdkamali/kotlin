@@ -33,13 +33,13 @@ import com.intellij.openapi.roots.impl.libraries.LibraryEx
 import com.intellij.openapi.roots.libraries.Library
 import com.intellij.openapi.util.Key
 import com.intellij.util.PathUtil
+import org.jetbrains.kotlin.caching.*
 import org.jetbrains.kotlin.cli.common.arguments.K2JSCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.parseCommandLineArguments
 import org.jetbrains.kotlin.config.*
 import org.jetbrains.kotlin.extensions.ProjectExtensionDescriptor
-import org.jetbrains.kotlin.gradle.ArgsInfo
-import org.jetbrains.kotlin.gradle.CompilerArgumentsBySourceSet
+import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.ide.konan.NativeLibraryKind
 import org.jetbrains.kotlin.idea.compiler.configuration.KotlinCommonCompilerArgumentsHolder
 import org.jetbrains.kotlin.idea.configuration.GradlePropertiesFileFacade.Companion.KOTLIN_CODE_STYLE_GRADLE_SETTING
@@ -60,15 +60,13 @@ import org.jetbrains.kotlin.platform.IdePlatformKind
 import org.jetbrains.kotlin.platform.impl.isCommon
 import org.jetbrains.kotlin.platform.impl.isJavaScript
 import org.jetbrains.kotlin.platform.impl.isJvm
+import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.psi.UserDataProperty
 import org.jetbrains.plugins.gradle.model.data.BuildScriptClasspathData
 import org.jetbrains.plugins.gradle.model.data.GradleSourceSetData
 import org.jetbrains.plugins.gradle.util.GradleConstants
 import java.io.File
 import java.util.*
-
-var Module.compilerArgumentsBySourceSet
-        by UserDataProperty(Key.create<CompilerArgumentsBySourceSet>("CURRENT_COMPILER_ARGUMENTS"))
 
 var Module.sourceSetName
         by UserDataProperty(Key.create<String>("SOURCE_SET_NAME"))
@@ -173,6 +171,7 @@ class KotlinGradleLibraryDataService : AbstractProjectDataService<LibraryData, V
     ) {
         if (toImport.isEmpty()) return
         val projectDataNode = toImport.first().parent!!
+
         @Suppress("UNCHECKED_CAST")
         val moduleDataNodes = projectDataNode.children.filter { it.data is ModuleData } as List<DataNode<ModuleData>>
         val anyNonJvmModules = moduleDataNodes
@@ -286,14 +285,16 @@ fun configureFacetByGradleModule(
     )
 
     if (sourceSetNode == null) {
-        ideModule.compilerArgumentsBySourceSet = moduleNode.compilerArgumentsBySourceSet
         ideModule.sourceSetName = sourceSetName
     }
     ideModule.hasExternalSdkConfiguration = sourceSetNode?.data?.sdkName != null
 
-    val argsInfo = moduleNode.compilerArgumentsBySourceSet?.get(sourceSetName ?: "main")
-    if (argsInfo != null) {
-        configureFacetByCompilerArguments(kotlinFacet, argsInfo, modelsProvider)
+    val projectDataNode = moduleNode.getDataNode(ProjectKeys.PROJECT) ?: return null
+    val generalMapper = projectDataNode.projectCompilerArgumentMapperContainer.projectCompilerArgumentsMapper
+
+    val cachedArgsInfo = moduleNode.cachedCompilerArgumentsBySourceSet?.get(sourceSetName ?: "main")
+    if (cachedArgsInfo != null) {
+        configureFacetByCachedCompilerArguments(cachedArgsInfo, generalMapper, kotlinFacet, modelsProvider)
     }
 
     with(kotlinFacet.configuration.settings) {
@@ -311,6 +312,28 @@ fun configureFacetByGradleModule(
     return kotlinFacet
 }
 
+private fun configureFacetByCachedCompilerArguments(
+    cachedArgsInfo: CachedArgsInfo,
+    mapper: CompilerArgumentsMapperWithMerge,
+    kotlinFacet: KotlinFacet,
+    modelsProvider: IdeModifiableModelsProvider
+) {
+    val (flatCurrentArguments, flatDefaultArguments) = with(CachedToFlatCompilerArgumentsBucketConverter(mapper)) {
+        convert(cachedArgsInfo.currentCompilerArgumentsBucket) to convert(cachedArgsInfo.defaultCompilerArgumentsBucket)
+    }
+    val dependencyClasspath = cachedArgsInfo.dependencyClasspath.map { mapper.getArgument(it) }.toTypedArray()
+    val flatArgsInfo = FlatArgsInfoImpl(flatCurrentArguments, flatDefaultArguments, dependencyClasspath)
+    configureFacetByFlatArgsInfo(kotlinFacet, flatArgsInfo, modelsProvider)
+}
+
+fun configureFacetByFlatArgsInfo(kotlinFacet: KotlinFacet, flatArgsInfo: FlatArgsInfo, modelsProvider: IdeModifiableModelsProvider?) {
+    val currentCompilerArguments = FlatToRawCompilerArgumentsBucketConverter().convert(flatArgsInfo.currentCompilerArgumentsBucket)
+    val defaultCompilerArguments = FlatToRawCompilerArgumentsBucketConverter().convert(flatArgsInfo.defaultCompilerArgumentsBucket)
+    val dependencyClasspath = flatArgsInfo.dependencyClasspath.map { PathUtil.toSystemIndependentName(it) }
+    val argsInfoImpl = ArgsInfoImpl(currentCompilerArguments, defaultCompilerArguments, dependencyClasspath)
+    configureFacetByCompilerArguments(kotlinFacet, argsInfoImpl, modelsProvider)
+}
+
 fun configureFacetByCompilerArguments(kotlinFacet: KotlinFacet, argsInfo: ArgsInfo, modelsProvider: IdeModifiableModelsProvider?) {
     val currentCompilerArguments = argsInfo.currentArguments
     val defaultCompilerArguments = argsInfo.defaultArguments
@@ -326,7 +349,12 @@ private fun getExplicitOutputPath(moduleNode: DataNode<ModuleData>, platformKind
         return null
     }
 
-    val k2jsArgumentList = moduleNode.compilerArgumentsBySourceSet?.get(sourceSet)?.currentArguments ?: return null
+    val projectDataNode = moduleNode.getDataNode(ProjectKeys.PROJECT) ?: return null
+    val generalMapper = projectDataNode.projectCompilerArgumentMapperContainer.projectCompilerArgumentsMapper
+
+    val k2jsArgumentList = moduleNode.cachedCompilerArgumentsBySourceSet?.get(sourceSet)
+        ?.currentCompilerArgumentsBucket?.let { CachedToRawCompilerArgumentsBucketConverter(generalMapper).convert(it) }
+        ?: return null
     return K2JSCompilerArguments().apply { parseCommandLineArguments(k2jsArgumentList, this) }.outputFile
 }
 

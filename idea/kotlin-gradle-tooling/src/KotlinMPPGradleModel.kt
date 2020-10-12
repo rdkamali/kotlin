@@ -5,6 +5,8 @@
 
 package org.jetbrains.kotlin.gradle
 
+import org.jetbrains.kotlin.caching.CachedArgsInfo
+import org.jetbrains.kotlin.caching.ICompilerArgumentsMapper
 import org.jetbrains.plugins.gradle.model.ExternalDependency
 import org.jetbrains.plugins.gradle.model.ModelFactory
 import java.io.File
@@ -100,8 +102,7 @@ interface KotlinNativeCompilationExtensions : Serializable {
 interface KotlinCompilation : KotlinModule {
     val sourceSets: Collection<KotlinSourceSet>
     val output: KotlinCompilationOutput
-    val arguments: KotlinCompilationArguments
-    val dependencyClasspath: Array<String>
+    val cachedArgsInfo: CachedArgsInfo
     val disambiguationClassifier: String?
     val platform: KotlinPlatform
     val kotlinTaskProperties: KotlinTaskProperties
@@ -180,6 +181,7 @@ interface KotlinMPPGradleModel : Serializable {
     val targets: Collection<KotlinTarget>
     val extraFeatures: ExtraFeatures
     val kotlinNativeHome: String
+    val compilerArgumentsMapper: ICompilerArgumentsMapper
 
     companion object {
         const val NO_KOTLIN_NATIVE_HOME = ""

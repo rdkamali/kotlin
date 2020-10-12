@@ -30,6 +30,8 @@ import org.gradle.tooling.model.UnsupportedMethodException
 import org.gradle.tooling.model.idea.IdeaContentRoot
 import org.gradle.tooling.model.idea.IdeaModule
 import org.jetbrains.annotations.NonNls
+import org.jetbrains.kotlin.caching.CachedToRawCompilerArgumentsBucketConverter
+import org.jetbrains.kotlin.caching.ICompilerArgumentsMapper
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.ManualLanguageFeatureSetting
@@ -279,6 +281,8 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
             if (mppModel == null || externalProject == null) return
             mainModuleNode.isMppDataInitialized = true
 
+            projectDataNode.projectCompilerArgumentMapperContainer.mergeArgumentsFromMapper(mppModel.compilerArgumentsMapper, true)
+
             val jdkName = gradleModule.jdkNameIfAny
 
             // save artifacts locations.
@@ -357,10 +361,12 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
                         it.sdkName = jdkName
                     }
 
+
                     val kotlinSourceSet = createSourceSetInfo(
                         compilation,
                         gradleModule,
-                        resolverCtx
+                        resolverCtx,
+                        projectDataNode.projectCompilerArgumentMapperContainer.projectMppCompilerArgumentsMapper
                     ) ?: continue
                     kotlinSourceSet.externalSystemRunTasks =
                         compilation.sourceSets.firstNotNullResult { sourceSetToRunTasks[it] } ?: emptyList()
@@ -782,7 +788,8 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
             if (fromModule.data == toModule.data) return
             val fromData = fromModule.data as? ModuleData ?: return
             val toData = toModule.data as? ModuleData ?: return
-            val existing = fromModule.children.mapNotNull { it.data as? ModuleDependencyData }.filter { it.target.id == (toModule.data as? ModuleData)?.id }
+            val existing = fromModule.children.mapNotNull { it.data as? ModuleDependencyData }
+                .filter { it.target.id == (toModule.data as? ModuleData)?.id }
             val nodeToModify =
                 existing.singleOrNull() ?: existing.firstOrNull { it.scope == DependencyScope.COMPILE } ?: existing.firstOrNull()
             if (nodeToModify != null) {
@@ -1022,14 +1029,16 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
         fun createSourceSetInfo(
             compilation: KotlinCompilation,
             gradleModule: IdeaModule,
-            resolverCtx: ProjectResolverContext
+            resolverCtx: ProjectResolverContext,
+            compilerArgumentsMapper: ICompilerArgumentsMapper
         ): KotlinSourceSetInfo? {
             if (compilation.platform.isNotSupported()) return null
             if (Proxy.isProxyClass(compilation.javaClass)) {
                 return createSourceSetInfo(
                     KotlinCompilationImpl(compilation, HashMap<Any, Any>()),
                     gradleModule,
-                    resolverCtx
+                    resolverCtx,
+                    compilerArgumentsMapper
                 )
             }
             return KotlinSourceSetInfo(compilation).also { sourceSetInfo ->
@@ -1040,13 +1049,22 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
                 sourceSetInfo.dependsOn = compilation.sourceSets.flatMap { it.dependsOnSourceSets }.map {
                     getGradleModuleQualifiedName(resolverCtx, gradleModule, it)
                 }.distinct().toList()
+
+                val compilerArgumentsList = CachedToRawCompilerArgumentsBucketConverter(compilerArgumentsMapper)
+                    .convert(compilation.cachedArgsInfo.currentCompilerArgumentsBucket)
+
                 sourceSetInfo.compilerArguments =
-                    createCompilerArguments(compilation.arguments.currentArguments.toList(), compilation.platform).also {
+                    createCompilerArguments(compilerArgumentsList, compilation.platform).also {
                         it.multiPlatform = true
                     }
-                sourceSetInfo.dependencyClasspath = compilation.dependencyClasspath.toList()
+
+                val defaultCompilerArgumentsList = CachedToRawCompilerArgumentsBucketConverter(compilerArgumentsMapper)
+                    .convert(compilation.cachedArgsInfo.defaultCompilerArgumentsBucket)
                 sourceSetInfo.defaultCompilerArguments =
-                    createCompilerArguments(compilation.arguments.defaultArguments.toList(), compilation.platform)
+                    createCompilerArguments(defaultCompilerArgumentsList, compilation.platform)
+
+                sourceSetInfo.dependencyClasspath =
+                    compilation.cachedArgsInfo.dependencyClasspath.map { compilerArgumentsMapper.getArgument(it) }
                 sourceSetInfo.addSourceSets(compilation.sourceSets, compilation.fullName(), gradleModule, resolverCtx)
             }
         }
