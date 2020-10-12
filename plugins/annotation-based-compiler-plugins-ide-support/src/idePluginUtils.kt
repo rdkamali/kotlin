@@ -47,7 +47,9 @@ internal fun modifyCompilerArgumentsForPlugin(
     val facetSettings = facet.configuration.settings
 
     // investigate why copyBean() sometimes throws exceptions
-    val commonArguments = facetSettings.compilerArguments ?: CommonCompilerArguments.DummyImpl()
+    val commonArguments = facetSettings.compilerArguments ?: CommonCompilerArguments.DummyImpl().also {
+        facetSettings.compilerArguments = it
+    }
 
     /** See [CommonCompilerArguments.PLUGIN_OPTION_FORMAT] **/
     val newOptionsForPlugin = setup?.options?.map { "plugin:$compilerPluginId:${it.key}=${it.value}" } ?: emptyList()
@@ -69,5 +71,4 @@ internal fun modifyCompilerArgumentsForPlugin(
     commonArguments.pluginOptions = newAllPluginOptions.toTypedArray()
     commonArguments.pluginClasspaths = newPluginClasspaths.toTypedArray()
 
-    facetSettings.compilerArguments = commonArguments
 }

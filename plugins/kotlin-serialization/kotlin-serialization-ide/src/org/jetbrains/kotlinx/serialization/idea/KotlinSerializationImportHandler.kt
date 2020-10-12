@@ -33,7 +33,9 @@ internal object KotlinSerializationImportHandler {
 
     fun modifyCompilerArguments(facet: KotlinFacet, buildSystemPluginJar: String) {
         val facetSettings = facet.configuration.settings
-        val commonArguments = facetSettings.compilerArguments ?: CommonCompilerArguments.DummyImpl()
+        val commonArguments = facetSettings.compilerArguments ?: CommonCompilerArguments.DummyImpl().also {
+            facetSettings.compilerArguments = it
+        }
 
         var pluginWasEnabled = false
         val oldPluginClasspaths = (commonArguments.pluginClasspaths ?: emptyArray()).filterTo(mutableListOf()) {
@@ -48,6 +50,5 @@ internal object KotlinSerializationImportHandler {
 
         val newPluginClasspaths = if (pluginWasEnabled) oldPluginClasspaths + PLUGIN_JPS_JAR else oldPluginClasspaths
         commonArguments.pluginClasspaths = newPluginClasspaths.toTypedArray()
-        facetSettings.compilerArguments = commonArguments
     }
 }

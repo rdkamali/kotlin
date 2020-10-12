@@ -27,7 +27,9 @@ class KaptGradleProjectImportHandler : GradleProjectImportHandler {
 
         // Can't reuse const in Kapt3CommandLineProcessor, we don't have Kapt in the IDEA plugin
         val compilerPluginId = "org.jetbrains.kotlin.kapt3"
-        val compilerArguments = facetSettings.compilerArguments ?: CommonCompilerArguments.DummyImpl()
+        val compilerArguments = facetSettings.compilerArguments ?: CommonCompilerArguments.DummyImpl().also {
+            facetSettings.compilerArguments = it
+        }
 
         val newPluginOptions = (compilerArguments.pluginOptions ?: emptyArray()).filter { !it.startsWith("plugin:$compilerPluginId:") }
         val newPluginClasspath = (compilerArguments.pluginClasspaths ?: emptyArray()).filter { !isKaptCompilerPluginPath(it) }
@@ -36,8 +38,6 @@ class KaptGradleProjectImportHandler : GradleProjectImportHandler {
 
         compilerArguments.pluginOptions = newPluginOptions.toArrayIfNotEmpty()
         compilerArguments.pluginClasspaths = newPluginClasspath.toArrayIfNotEmpty()
-
-        facetSettings.compilerArguments = compilerArguments
     }
 
     private fun isKaptCompilerPluginPath(path: String): Boolean {
