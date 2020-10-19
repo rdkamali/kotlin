@@ -16,10 +16,12 @@
 
 package org.jetbrains.kotlin.gradle.internal
 
+import com.intellij.util.PathUtil
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
-import org.jetbrains.kotlin.cli.common.arguments.CommonToolArguments
+import org.jetbrains.kotlin.cli.common.arguments.*
 import org.jetbrains.kotlin.compilerRunner.ArgumentUtils
+import java.io.File
 
 interface CompilerArgumentAware<T : CommonToolArguments> {
     val serializedCompilerArguments: List<String>
@@ -36,8 +38,12 @@ interface CompilerArgumentAware<T : CommonToolArguments> {
     val filteredArgumentsMap: Map<String, String>
         get() = CompilerArgumentsGradleInput.createInputsMap(prepareCompilerArguments())
 
+    val serializedCompilerArgumentsForBucket: List<List<String>>
+        get() = compilerArgumentsSplitter().splitCompilerArguments(prepareCompilerArguments(ignoreClasspathResolutionErrors = true))
+
     fun createCompilerArgs(): T
     fun setupCompilerArgs(args: T, defaultsOnly: Boolean = false, ignoreClasspathResolutionErrors: Boolean = false)
+    fun compilerArgumentsSplitter(): CompilerArgumentsSplitter<T>
 }
 
 internal fun <T : CommonToolArguments> CompilerArgumentAware<T>.prepareCompilerArguments(ignoreClasspathResolutionErrors: Boolean = false) =
@@ -59,4 +65,53 @@ interface CompilerArgumentAwareWithInput<T : CommonToolArguments> : CompilerArgu
     @get:Input
     override val filteredArgumentsMap: Map<String, String>
         get() = super.filteredArgumentsMap
+}
+
+interface CompilerArgumentsSplitter<T : CommonToolArguments> {
+    fun splitCompilerArguments(args: T): List<List<String>>
+}
+
+class K2JVMCompilerArgumentsSplitter : CompilerArgumentsSplitter<K2JVMCompilerArguments> {
+    override fun splitCompilerArguments(args: K2JVMCompilerArguments): List<List<String>> {
+        val classpathParts = args.classpath?.split(File.pathSeparator)?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
+        val pluginClasspaths = args.pluginClasspaths?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
+        val friendPaths = args.friendPaths?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
+        return copyBean(args).also {
+            it.classpath = null
+            it.pluginClasspaths = null
+            it.friendPaths = null
+        }.let { listOf(ArgumentUtils.convertArgumentsToStringList(it), classpathParts, pluginClasspaths, friendPaths) }
+    }
+}
+
+class K2JSCompilerArgumentsSplitter : CompilerArgumentsSplitter<K2JSCompilerArguments> {
+    override fun splitCompilerArguments(args: K2JSCompilerArguments): List<List<String>> {
+        val pluginClasspaths = args.pluginClasspaths?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
+        return copyBean(args).also {
+            it.pluginClasspaths = null
+        }.let { listOf(ArgumentUtils.convertArgumentsToStringList(it), emptyList(), pluginClasspaths, emptyList()) }
+    }
+}
+
+class K2MetadataCompilerArgumentsSplitter : CompilerArgumentsSplitter<K2MetadataCompilerArguments> {
+    override fun splitCompilerArguments(args: K2MetadataCompilerArguments): List<List<String>> {
+        val classpathParts = args.classpath?.split(File.pathSeparator)?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
+        val pluginClasspaths = args.pluginClasspaths?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
+        val friendPaths = args.friendPaths?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
+        return copyBean(args).also {
+            it.classpath = null
+            it.pluginClasspaths = null
+            it.friendPaths = null
+        }.let { listOf(ArgumentUtils.convertArgumentsToStringList(it), classpathParts, pluginClasspaths, friendPaths) }
+    }
+}
+
+class K2JSDceArgumentsSplitter : CompilerArgumentsSplitter<K2JSDceArguments> {
+    override fun splitCompilerArguments(args: K2JSDceArguments): List<List<String>> = listOf(
+        ArgumentUtils.convertArgumentsToStringList(args),
+        emptyList(),
+        emptyList(),
+        emptyList()
+    )
+
 }

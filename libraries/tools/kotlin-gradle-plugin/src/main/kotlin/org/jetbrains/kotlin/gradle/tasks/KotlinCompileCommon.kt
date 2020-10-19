@@ -28,6 +28,7 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinCommonCompile
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformCommonOptions
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformCommonOptionsImpl
 import org.jetbrains.kotlin.gradle.dsl.fillDefaultValues
+import org.jetbrains.kotlin.gradle.internal.CompilerArgumentsSplitter
 import org.jetbrains.kotlin.gradle.internal.tasks.allOutputFiles
 import org.jetbrains.kotlin.gradle.logging.GradlePrintingMessageCollector
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
@@ -103,5 +104,9 @@ open class KotlinCompileCommon : AbstractKotlinCompile<K2MetadataCompilerArgumen
             outputFiles = allOutputFiles()
         )
         compilerRunner.runMetadataCompilerAsync(sourceRoots.kotlinSourceFiles, args, environment)
+    }
+
+    override fun compilerArgumentsSplitter(): CompilerArgumentsSplitter<K2MetadataCompilerArguments> {
+        TODO("Not yet implemented")
     }
 }

@@ -29,6 +29,8 @@ import org.jetbrains.kotlin.compilerRunner.runToolInSeparateProcess
 import org.jetbrains.kotlin.gradle.dsl.KotlinJsDce
 import org.jetbrains.kotlin.gradle.dsl.KotlinJsDceOptions
 import org.jetbrains.kotlin.gradle.dsl.KotlinJsDceOptionsImpl
+import org.jetbrains.kotlin.gradle.internal.CompilerArgumentsSplitter
+import org.jetbrains.kotlin.gradle.internal.K2JSDceArgumentsSplitter
 import org.jetbrains.kotlin.gradle.logging.GradleKotlinLogger
 import org.jetbrains.kotlin.gradle.utils.canonicalPathWithoutExtension
 import java.io.File
@@ -108,4 +110,6 @@ open class KotlinJsDce : AbstractKotlinCompileTool<K2JSDceArguments>(), KotlinJs
 
         return File("${file.canonicalPathWithoutExtension()}.meta.js").exists()
     }
+
+    override fun compilerArgumentsSplitter(): CompilerArgumentsSplitter<K2JSDceArguments> = K2JSDceArgumentsSplitter()
 }
