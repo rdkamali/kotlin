@@ -49,7 +49,7 @@ class CachedToRawCompilerArgumentsBucketConverter(val mapper: ICompilerArguments
         }
 }
 
-class RawToFlatCompilerArgumentsBucket :
+class RawToFlatCompilerArgumentsBucketConverter :
     CompilerArgumentsBucketConverter<RawCompilerArgumentsBucket, FlatCompilerArgumentsBucket> {
     override fun convert(from: RawCompilerArgumentsBucket): FlatCompilerArgumentsBucket {
         val pluginClasspathArgument = from.firstOrNull { it.startsWith(PLUGIN_CLASSPATH_PREFIX) }
@@ -73,7 +73,7 @@ class RawToFlatCompilerArgumentsBucket :
     }
 }
 
-class FlatToCachedCompilerArgumentsBucket(val mapper: ICompilerArgumentsMapper) :
+class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<FlatCompilerArgumentsBucket, CachedCompilerArgumentsBucket> {
     override fun convert(from: FlatCompilerArgumentsBucket): CachedCompilerArgumentsBucket {
         val generalArguments = from.generalArguments.map { mapper.cacheArgument(it) }.toTypedArray()
@@ -84,10 +84,10 @@ class FlatToCachedCompilerArgumentsBucket(val mapper: ICompilerArgumentsMapper) 
     }
 }
 
-class RawToCachedCompilerArgumentsBucket(val mapper: ICompilerArgumentsMapper) :
+class RawToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<RawCompilerArgumentsBucket, CachedCompilerArgumentsBucket> {
     override fun convert(from: RawCompilerArgumentsBucket): CachedCompilerArgumentsBucket =
-        RawToFlatCompilerArgumentsBucket().convert(from).let {
-            FlatToCachedCompilerArgumentsBucket(mapper).convert(it)
+        RawToFlatCompilerArgumentsBucketConverter().convert(from).let {
+            FlatToCachedCompilerArgumentsBucketConverter(mapper).convert(it)
         }
 }

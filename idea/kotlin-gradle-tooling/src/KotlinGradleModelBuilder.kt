@@ -139,6 +139,16 @@ class KotlinGradleModelBuilder : AbstractKotlinGradleModelBuilder() {
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
+    private fun Task.getCompilerArgumentsForBucket(methodName: String): Array<Array<String>>? {
+        return try {
+            javaClass.getDeclaredMethod(methodName).invoke(this) as Array<Array<String>>
+        } catch (e: Exception) {
+            // No argument accessor method is available
+            null
+        }
+    }
+
     private fun Task.getDependencyClasspath(): List<String> {
         try {
             val abstractKotlinCompileClass = javaClass.classLoader.loadClass(ABSTRACT_KOTLIN_COMPILE_CLASS)
@@ -184,14 +194,27 @@ class KotlinGradleModelBuilder : AbstractKotlinGradleModelBuilder() {
             if (compileTask.javaClass.name !in kotlinCompileTaskClasses) return@forEach
 
             val sourceSetName = compileTask.getSourceSetName()
-            val currentArguments = compileTask.getCompilerArguments("getSerializedCompilerArguments")
-                ?: compileTask.getCompilerArguments("getSerializedCompilerArgumentsIgnoreClasspathIssues")
-                ?: emptyList()
-            val currentCompilerArgumentsBucket =
-                RawToCachedCompilerArgumentsBucket(modelDetachableMapper).convert(currentArguments)
-            val defaultArguments = compileTask.getCompilerArguments("getDefaultSerializedCompilerArguments").orEmpty()
+
+            val currentCompilerArgumentsForBucket =
+                compileTask.getCompilerArgumentsForBucket("getSerializedCompilerArgumentsForBucket")?.let {
+                    FlatCompilerArgumentsBucket(it[0], it[1], it[2], it[3])
+                } ?: RawToFlatCompilerArgumentsBucketConverter().let {
+                    val currentArguments = compileTask.getCompilerArguments("getSerializedCompilerArguments")
+                        ?: compileTask.getCompilerArguments("getSerializedCompilerArgumentsIgnoreClasspathIssues")
+                        ?: emptyList()
+                    it.convert(currentArguments)
+                }
+
+            val currentCompilerArgumentsBucket = FlatToCachedCompilerArgumentsBucketConverter(modelDetachableMapper)
+                .convert(currentCompilerArgumentsForBucket)
+
+            val defaultCompilerArgumentsForBucket =
+                compileTask.getCompilerArgumentsForBucket("getDefaultSerializedCompilerArgumentsForBucket")?.let {
+                    FlatCompilerArgumentsBucket(it[0], it[1], it[2], it[3])
+                } ?: RawToFlatCompilerArgumentsBucketConverter().convert(compileTask.getCompilerArguments("getDefaultSerializedCompilerArguments").orEmpty())
+
             val defaultCompilerArgumentsBucket =
-                RawToCachedCompilerArgumentsBucket(modelDetachableMapper).convert(defaultArguments)
+                FlatToCachedCompilerArgumentsBucketConverter(modelDetachableMapper).convert(defaultCompilerArgumentsForBucket)
             val dependencyClasspath = compileTask.getDependencyClasspath()
             val dependencyClasspathCacheIds =
                 dependencyClasspath.map { modelDetachableMapper.cacheArgument(it) }.toTypedArray()

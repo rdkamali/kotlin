@@ -38,8 +38,13 @@ interface CompilerArgumentAware<T : CommonToolArguments> {
     val filteredArgumentsMap: Map<String, String>
         get() = CompilerArgumentsGradleInput.createInputsMap(prepareCompilerArguments())
 
-    val serializedCompilerArgumentsForBucket: List<List<String>>
+    val serializedCompilerArgumentsForBucket: Array<Array<String>>
         get() = compilerArgumentsSplitter().splitCompilerArguments(prepareCompilerArguments(ignoreClasspathResolutionErrors = true))
+
+    val defaultSerializedCompilerArgumentsForBucket: Array<Array<String>>
+        get() = createCompilerArgs().also { setupCompilerArgs(it, defaultsOnly = true) }.let {
+            compilerArgumentsSplitter().splitCompilerArguments(it)
+        }
 
     fun createCompilerArgs(): T
     fun setupCompilerArgs(args: T, defaultsOnly: Boolean = false, ignoreClasspathResolutionErrors: Boolean = false)
@@ -65,53 +70,58 @@ interface CompilerArgumentAwareWithInput<T : CommonToolArguments> : CompilerArgu
     @get:Input
     override val filteredArgumentsMap: Map<String, String>
         get() = super.filteredArgumentsMap
+
+    @get:Internal
+    override val serializedCompilerArgumentsForBucket: Array<Array<String>>
+        get() = super.serializedCompilerArgumentsForBucket
+
+    @get:Internal
+    override val defaultSerializedCompilerArgumentsForBucket: Array<Array<String>>
+        get() = super.defaultSerializedCompilerArgumentsForBucket
 }
 
 interface CompilerArgumentsSplitter<T : CommonToolArguments> {
-    fun splitCompilerArguments(args: T): List<List<String>>
+    fun splitCompilerArguments(args: T): Array<Array<String>>
 }
 
 class K2JVMCompilerArgumentsSplitter : CompilerArgumentsSplitter<K2JVMCompilerArguments> {
-    override fun splitCompilerArguments(args: K2JVMCompilerArguments): List<List<String>> {
-        val classpathParts = args.classpath?.split(File.pathSeparator)?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
-        val pluginClasspaths = args.pluginClasspaths?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
-        val friendPaths = args.friendPaths?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
+    override fun splitCompilerArguments(args: K2JVMCompilerArguments): Array<Array<String>> {
+        val classpathParts =
+            args.classpath?.split(File.pathSeparator)?.map { PathUtil.toSystemIndependentName(it) }.orEmpty().toTypedArray()
+        val pluginClasspaths = args.pluginClasspaths?.map { PathUtil.toSystemIndependentName(it) }.orEmpty().toTypedArray()
+        val friendPaths = args.friendPaths?.map { PathUtil.toSystemIndependentName(it) }.orEmpty().toTypedArray()
         return copyBean(args).also {
             it.classpath = null
             it.pluginClasspaths = null
             it.friendPaths = null
-        }.let { listOf(ArgumentUtils.convertArgumentsToStringList(it), classpathParts, pluginClasspaths, friendPaths) }
+        }.let { arrayOf(ArgumentUtils.convertArgumentsToStringList(it).toTypedArray(), classpathParts, pluginClasspaths, friendPaths) }
     }
 }
 
 class K2JSCompilerArgumentsSplitter : CompilerArgumentsSplitter<K2JSCompilerArguments> {
-    override fun splitCompilerArguments(args: K2JSCompilerArguments): List<List<String>> {
-        val pluginClasspaths = args.pluginClasspaths?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
+    override fun splitCompilerArguments(args: K2JSCompilerArguments): Array<Array<String>> {
+        val pluginClasspaths = args.pluginClasspaths?.map { PathUtil.toSystemIndependentName(it) }.orEmpty().toTypedArray()
         return copyBean(args).also {
             it.pluginClasspaths = null
-        }.let { listOf(ArgumentUtils.convertArgumentsToStringList(it), emptyList(), pluginClasspaths, emptyList()) }
+        }.let { arrayOf(ArgumentUtils.convertArgumentsToStringList(it).toTypedArray(), emptyArray(), pluginClasspaths, emptyArray()) }
     }
 }
 
 class K2MetadataCompilerArgumentsSplitter : CompilerArgumentsSplitter<K2MetadataCompilerArguments> {
-    override fun splitCompilerArguments(args: K2MetadataCompilerArguments): List<List<String>> {
-        val classpathParts = args.classpath?.split(File.pathSeparator)?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
-        val pluginClasspaths = args.pluginClasspaths?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
-        val friendPaths = args.friendPaths?.map { PathUtil.toSystemIndependentName(it) } ?: emptyList()
+    override fun splitCompilerArguments(args: K2MetadataCompilerArguments): Array<Array<String>> {
+        val classpathParts =
+            args.classpath?.split(File.pathSeparator)?.map { PathUtil.toSystemIndependentName(it) }.orEmpty().toTypedArray()
+        val pluginClasspaths = args.pluginClasspaths?.map { PathUtil.toSystemIndependentName(it) }.orEmpty().toTypedArray()
+        val friendPaths = args.friendPaths?.map { PathUtil.toSystemIndependentName(it) }.orEmpty().toTypedArray()
         return copyBean(args).also {
             it.classpath = null
             it.pluginClasspaths = null
             it.friendPaths = null
-        }.let { listOf(ArgumentUtils.convertArgumentsToStringList(it), classpathParts, pluginClasspaths, friendPaths) }
+        }.let { arrayOf(ArgumentUtils.convertArgumentsToStringList(it).toTypedArray(), classpathParts, pluginClasspaths, friendPaths) }
     }
 }
 
 class K2JSDceArgumentsSplitter : CompilerArgumentsSplitter<K2JSDceArguments> {
-    override fun splitCompilerArguments(args: K2JSDceArguments): List<List<String>> = listOf(
-        ArgumentUtils.convertArgumentsToStringList(args),
-        emptyList(),
-        emptyList(),
-        emptyList()
-    )
-
+    override fun splitCompilerArguments(args: K2JSDceArguments): Array<Array<String>> =
+        arrayOf(ArgumentUtils.convertArgumentsToStringList(args).toTypedArray(), emptyArray(), emptyArray(), emptyArray())
 }

@@ -595,7 +595,9 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         val kotlinSourceSets = kotlinGradleSourceSets.mapNotNull { sourceSetMap[it.name] }
         val compileKotlinTask = getCompileKotlinTaskName(project, gradleCompilation) ?: return null
         val output = buildCompilationOutput(gradleCompilation, compileKotlinTask) ?: return null
-        val compilationCachedArgsInfo = buildCompilationCachedArgsInfo(compileKotlinTask, compilerArgumentsMapper) ?: return null
+        val compilationCachedArgsInfo = buildCachedArgsInfo(compileKotlinTask, compilerArgumentsMapper)
+            ?: buildCachedArgsInfoUnsafe(compileKotlinTask, compilerArgumentsMapper)
+            ?: return null
         val dependencies =
             buildCompilationDependencies(gradleCompilation, classifier, sourceSetMap, dependencyResolver, project, dependencyMapper)
         val kotlinTaskProperties = getKotlinTaskProperties(compileKotlinTask, classifier)
@@ -766,26 +768,53 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         null
     } ?: emptyList()
 
-    private fun buildCompilationCachedArgsInfo(
+    @Suppress("UNCHECKED_CAST")
+    private fun safelyGetArgumentsForBucket(compileKotlinTask: Task, accessor: Method?): Array<Array<String>>? = try {
+        accessor?.invoke(compileKotlinTask) as? Array<Array<String>>
+    } catch (e: Exception) {
+        logger.info(e.message ?: "Unexpected exception: $e", e)
+        null
+    }
+
+    private fun buildCachedArgsInfoUnsafe(
         compileKotlinTask: Task,
         compilerArgumentsMapper: ICompilerArgumentsMapper
     ): CachedArgsInfo? {
-        val compilationArguments = buildCompilationArguments(compileKotlinTask) ?: return null
+        val compilationArguments = buildCompilationArgumentsUnsafe(compileKotlinTask) ?: return null
         val dependencyClasspath = buildDependencyClasspath(compileKotlinTask)
         return CachedArgsInfoImpl(
-            RawToCachedCompilerArgumentsBucket(compilerArgumentsMapper).convert(compilationArguments.currentArguments.toList()),
-            RawToCachedCompilerArgumentsBucket(compilerArgumentsMapper).convert(compilationArguments.defaultArguments.toList()),
+            RawToCachedCompilerArgumentsBucketConverter(compilerArgumentsMapper).convert(compilationArguments.currentArguments.toList()),
+            RawToCachedCompilerArgumentsBucketConverter(compilerArgumentsMapper).convert(compilationArguments.defaultArguments.toList()),
             dependencyClasspath.map { compilerArgumentsMapper.cacheArgument(it) }.toTypedArray()
         )
     }
 
-    private fun buildCompilationArguments(compileKotlinTask: Task): KotlinCompilationArguments? {
+    private fun buildCompilationArgumentsUnsafe(compileKotlinTask: Task): KotlinCompilationArguments? {
         val compileTaskClass = compileKotlinTask.javaClass
         val getCurrentArguments = compileTaskClass.getMethodOrNull("getSerializedCompilerArguments")
         val getDefaultArguments = compileTaskClass.getMethodOrNull("getDefaultSerializedCompilerArguments")
         val currentArguments = safelyGetArguments(compileKotlinTask, getCurrentArguments)
         val defaultArguments = safelyGetArguments(compileKotlinTask, getDefaultArguments)
         return KotlinCompilationArgumentsImpl(defaultArguments.toTypedArray(), currentArguments.toTypedArray())
+    }
+
+    private fun buildCachedArgsInfo(compileKotlinTask: Task, compilerArgumentsMapper: ICompilerArgumentsMapper): CachedArgsInfo? {
+        val compileTaskClass = compileKotlinTask.javaClass
+        val currentFlatArgumentsBucket = compileTaskClass.getMethodOrNull("getSerializedCompilerArgumentsForBucket")
+            ?.let { safelyGetArgumentsForBucket(compileKotlinTask, it) }
+            ?.let { FlatCompilerArgumentsBucket(it[0], it[1], it[2], it[3]) } ?: return null
+        val defaultArgumentsForBucket = compileTaskClass.getMethodOrNull("getDefaultSerializedCompilerArgumentsForBucket")
+            ?.let { safelyGetArgumentsForBucket(compileKotlinTask, it) }
+            ?.let { FlatCompilerArgumentsBucket(it[0], it[1], it[2], it[3]) }
+            ?: FlatCompilerArgumentsBucket(emptyArray(), emptyArray(), emptyArray(), emptyArray())
+        val dependencyClasspath = buildDependencyClasspath(compileKotlinTask)
+        return with(FlatToCachedCompilerArgumentsBucketConverter(compilerArgumentsMapper)) {
+            CachedArgsInfoImpl(
+                convert(currentFlatArgumentsBucket),
+                convert(defaultArgumentsForBucket),
+                dependencyClasspath.map { compilerArgumentsMapper.cacheArgument(it) }.toTypedArray()
+            )
+        }
     }
 
     private fun buildDependencyClasspath(compileKotlinTask: Task): List<String> {
