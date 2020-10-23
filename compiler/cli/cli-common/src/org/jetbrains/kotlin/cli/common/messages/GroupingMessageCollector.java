@@ -22,9 +22,8 @@ import kotlin.collections.CollectionsKt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.function.Predicate;
 
 public class GroupingMessageCollector implements MessageCollector {
     private final MessageCollector delegate;
@@ -63,11 +62,21 @@ public class GroupingMessageCollector implements MessageCollector {
     }
 
     private boolean hasExplicitErrors() {
-        return groupedMessages.entries().stream().anyMatch(entry -> entry.getValue().severity.isError());
+        return groupedMessages.entries().stream().anyMatch(new Predicate<Map.Entry<CompilerMessageSourceLocation, Message>>() {
+            @Override
+            public boolean test(Map.Entry<CompilerMessageSourceLocation, Message> entry) {
+                return entry.getValue().severity.isError();
+            }
+        });
     }
 
     private boolean hasWarnings() {
-        return groupedMessages.entries().stream().anyMatch(entry -> entry.getValue().severity.isWarning());
+        return groupedMessages.entries().stream().anyMatch(new Predicate<Map.Entry<CompilerMessageSourceLocation, Message>>() {
+            @Override
+            public boolean test(Map.Entry<CompilerMessageSourceLocation, Message> entry) {
+                return entry.getValue().severity.isWarning();
+            }
+        });
     }
 
     public void flush() {
@@ -78,7 +87,22 @@ public class GroupingMessageCollector implements MessageCollector {
         }
 
         List<CompilerMessageSourceLocation> sortedKeys =
-                CollectionsKt.sortedWith(groupedMessages.keySet(), Comparator.nullsFirst(CompilerMessageLocationComparator.INSTANCE));
+                CollectionsKt.sortedWith(groupedMessages.keySet(),
+                                         new Comparator<CompilerMessageSourceLocation>() {
+                                             @Override
+                                             public int compare(CompilerMessageSourceLocation o1, CompilerMessageSourceLocation o2) {
+                                                 if (o1 == null) {
+                                                     return (o2 == null) ? 0 : -1;
+                                                 }
+                                                 else if (o2 == null) {
+                                                     return 1;
+                                                 }
+                                                 else {
+                                                     return CompilerMessageLocationComparator.INSTANCE.compare(o1, o2);
+                                                 }
+                                             }
+                                         }
+                );
         for (CompilerMessageSourceLocation location : sortedKeys) {
             for (Message message : groupedMessages.get(location)) {
                 if (!hasExplicitErrors || message.severity.isError() || message.severity == CompilerMessageSeverity.STRONG_WARNING) {
@@ -119,7 +143,11 @@ public class GroupingMessageCollector implements MessageCollector {
         private final String message;
         private final CompilerMessageSourceLocation location;
 
-        private Message(@NotNull CompilerMessageSeverity severity, @NotNull String message, @Nullable CompilerMessageSourceLocation location) {
+        private Message(
+                @NotNull CompilerMessageSeverity severity,
+                @NotNull String message,
+                @Nullable CompilerMessageSourceLocation location
+        ) {
             this.severity = severity;
             this.message = message;
             this.location = location;

@@ -75,7 +75,7 @@ public class ModuleXmlParser {
     }
 
     private final MessageCollector messageCollector;
-    private final List<Module> modules = new SmartList<>();
+    private final List<Module> modules = new SmartList<Module>();
     private DefaultHandler currentState;
 
     private ModuleXmlParser(@NotNull MessageCollector messageCollector) {
@@ -99,7 +99,10 @@ public class ModuleXmlParser {
             });
             return new ModuleChunk(modules);
         }
-        catch (ParserConfigurationException | IOException e) {
+        catch (ParserConfigurationException e) {
+            MessageCollectorUtil.reportException(messageCollector, e);
+        }
+        catch (IOException e) {
             MessageCollectorUtil.reportException(messageCollector, e);
         }
         catch (SAXException e) {

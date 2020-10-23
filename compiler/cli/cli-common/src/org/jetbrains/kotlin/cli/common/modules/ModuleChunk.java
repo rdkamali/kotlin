@@ -23,7 +23,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class ModuleChunk {
-    public static final ModuleChunk EMPTY = new ModuleChunk(Collections.emptyList());
+    public static final ModuleChunk EMPTY = new ModuleChunk(Collections.<Module>emptyList());
 
     private final List<Module> modules;
 

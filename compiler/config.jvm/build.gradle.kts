@@ -3,6 +3,8 @@ plugins {
     id("jps-compatible")
 }
 
+jvmTarget = "1.6"
+
 dependencies {
     api(project(":compiler:config"))
     api(project(":core:descriptors.jvm"))

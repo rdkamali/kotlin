@@ -69,7 +69,7 @@ public class OutputMessageUtil {
     }
 
     private static Collection<File> parseSourceFiles(String[] strings, int start) {
-        Collection<File> sourceFiles = new ArrayList<>();
+        Collection<File> sourceFiles = new ArrayList<File>();
         for (int i = start; i < strings.length; i++) {
             sourceFiles.add(new File(strings[i]));
         }
