@@ -9,6 +9,7 @@ jvmTarget = "1.6"
 
 dependencies {
     compile(kotlinStdlib())
+    compileOnly(project(":compiler:cli-common"))
 
     compileOnly(intellijPluginDep("gradle"))
     compileOnly(intellijDep()) { includeJars("slf4j-api-1.7.25") }

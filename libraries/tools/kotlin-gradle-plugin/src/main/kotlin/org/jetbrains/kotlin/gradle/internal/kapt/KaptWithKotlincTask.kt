@@ -25,6 +25,8 @@ import org.jetbrains.kotlin.gradle.internal.kapt.incremental.KaptIncrementalChan
 import org.jetbrains.kotlin.gradle.internal.tasks.allOutputFiles
 import org.jetbrains.kotlin.gradle.logging.GradleKotlinLogger
 import org.jetbrains.kotlin.gradle.logging.GradlePrintingMessageCollector
+import org.jetbrains.kotlin.gradle.org.jetbrains.kotlin.caching.CompilerArgumentsSplitter
+import org.jetbrains.kotlin.gradle.org.jetbrains.kotlin.caching.K2JVMCompilerArgumentsSplitter
 import org.jetbrains.kotlin.gradle.plugin.PLUGIN_CLASSPATH_CONFIGURATION_NAME
 import org.jetbrains.kotlin.gradle.tasks.CompilerPluginOptions
 import org.jetbrains.kotlin.gradle.tasks.GradleCompileTaskProvider
