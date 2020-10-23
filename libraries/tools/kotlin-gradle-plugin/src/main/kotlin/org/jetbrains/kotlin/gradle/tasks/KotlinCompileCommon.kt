@@ -106,7 +106,5 @@ open class KotlinCompileCommon : AbstractKotlinCompile<K2MetadataCompilerArgumen
         compilerRunner.runMetadataCompilerAsync(sourceRoots.kotlinSourceFiles, args, environment)
     }
 
-    override fun compilerArgumentsSplitter(): CompilerArgumentsSplitter<K2MetadataCompilerArguments> {
-        TODO("Not yet implemented")
-    }
+    override fun compilerArgumentsSplitter(): CompilerArgumentsSplitter<K2MetadataCompilerArguments> = K2MetadataCompilerArgumentsSplitter()
 }
