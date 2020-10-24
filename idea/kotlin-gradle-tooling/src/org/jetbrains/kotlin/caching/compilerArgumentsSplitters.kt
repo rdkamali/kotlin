@@ -3,7 +3,7 @@
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.gradle.org.jetbrains.kotlin.caching
+package org.jetbrains.kotlin.caching
 
 import org.jetbrains.kotlin.cli.common.arguments.*
 import java.io.File

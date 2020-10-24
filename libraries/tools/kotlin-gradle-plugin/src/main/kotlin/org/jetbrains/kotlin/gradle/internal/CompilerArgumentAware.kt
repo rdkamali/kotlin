@@ -20,7 +20,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.jetbrains.kotlin.cli.common.arguments.*
 import org.jetbrains.kotlin.compilerRunner.ArgumentUtils
-import org.jetbrains.kotlin.gradle.org.jetbrains.kotlin.caching.CompilerArgumentsSplitter
+import org.jetbrains.kotlin.caching.CompilerArgumentsSplitter
 
 interface CompilerArgumentAware<T : CommonToolArguments> {
     val serializedCompilerArguments: List<String>

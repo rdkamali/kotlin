@@ -33,9 +33,9 @@ import org.jetbrains.kotlin.gradle.internal.*
 import org.jetbrains.kotlin.gradle.internal.tasks.TaskWithLocalState
 import org.jetbrains.kotlin.gradle.internal.tasks.allOutputFiles
 import org.jetbrains.kotlin.gradle.logging.*
-import org.jetbrains.kotlin.gradle.org.jetbrains.kotlin.caching.CompilerArgumentsSplitter
-import org.jetbrains.kotlin.gradle.org.jetbrains.kotlin.caching.K2JSCompilerArgumentsSplitter
-import org.jetbrains.kotlin.gradle.org.jetbrains.kotlin.caching.K2JVMCompilerArgumentsSplitter
+import org.jetbrains.kotlin.caching.CompilerArgumentsSplitter
+import org.jetbrains.kotlin.caching.K2JSCompilerArgumentsSplitter
+import org.jetbrains.kotlin.caching.K2JVMCompilerArgumentsSplitter
 import org.jetbrains.kotlin.gradle.plugin.COMPILER_CLASSPATH_CONFIGURATION_NAME
 import org.jetbrains.kotlin.gradle.plugin.KotlinMultiplatformPluginWrapper
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformPluginBase
