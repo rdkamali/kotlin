@@ -36,6 +36,7 @@ class FlatToRawCompilerArgumentsBucketConverter :
             add(from.classpathParts.first())
             add(from.classpathParts.toMutableList().apply { removeFirst() }.joinToString(File.pathSeparator))
         }
+        // TODO replace with Argument annotation value from properties (reflection)
         add("$PLUGIN_CLASSPATH_PREFIX${from.pluginClasspaths.joinToString(",")}")
         add("$FRIEND_PATH_PREFIX${from.friendPaths.joinToString(",")}")
     }
@@ -43,9 +44,11 @@ class FlatToRawCompilerArgumentsBucketConverter :
 
 class CachedToRawCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<CachedCompilerArgumentsBucket, RawCompilerArgumentsBucket> {
+    private val cachedToFlatCompilerArgumentsBucketConverter by lazy { CachedToFlatCompilerArgumentsBucketConverter(mapper) }
+    private val flatToRawCompilerArgumentsBucketConverter by lazy { FlatToRawCompilerArgumentsBucketConverter() }
     override fun convert(from: CachedCompilerArgumentsBucket): RawCompilerArgumentsBucket =
-        CachedToFlatCompilerArgumentsBucketConverter(mapper).convert(from).let {
-            FlatToRawCompilerArgumentsBucketConverter().convert(it)
+        cachedToFlatCompilerArgumentsBucketConverter.convert(from).let {
+            flatToRawCompilerArgumentsBucketConverter.convert(it)
         }
 }
 
@@ -86,8 +89,10 @@ class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgument
 
 class RawToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<RawCompilerArgumentsBucket, CachedCompilerArgumentsBucket> {
+    private val rawToFlatCompilerArgumentsBucketConverter by lazy { RawToFlatCompilerArgumentsBucketConverter() }
+    private val flatToCachedCompilerArgumentsBucketConverter by lazy { FlatToCachedCompilerArgumentsBucketConverter(mapper) }
     override fun convert(from: RawCompilerArgumentsBucket): CachedCompilerArgumentsBucket =
-        RawToFlatCompilerArgumentsBucketConverter().convert(from).let {
-            FlatToCachedCompilerArgumentsBucketConverter(mapper).convert(it)
+        rawToFlatCompilerArgumentsBucketConverter.convert(from).let {
+            flatToCachedCompilerArgumentsBucketConverter.convert(it)
         }
 }
