@@ -27,7 +27,7 @@ import com.intellij.openapi.util.io.FileUtil
 import org.gradle.api.artifacts.Dependency
 import org.gradle.tooling.model.idea.IdeaModule
 import org.jetbrains.kotlin.caching.CachedCompilerArgumentBySourceSet
-import org.jetbrains.kotlin.caching.CompilerArgumentMappersContainer
+import org.jetbrains.kotlin.caching.CompilerArgumentsMapperWithMerge
 import org.jetbrains.kotlin.caching.deepCopy
 import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.idea.inspections.gradle.getDependencyModules
@@ -73,9 +73,11 @@ var DataNode<out ModuleData>.dependenciesCache
         )
 var DataNode<out ModuleData>.pureKotlinSourceFolders
         by NotNullableCopyableDataNodeUserDataProperty(Key.create<List<String>>("PURE_KOTLIN_SOURCE_FOLDER"), emptyList())
-var DataNode<ProjectData>.projectCompilerArgumentMapperContainer
-        by NotNullableCopyableDataNodeUserDataProperty(Key.create("COMPILER_ARGUMENT_MAPPER_CONTAINER"), CompilerArgumentMappersContainer())
+var DataNode<ProjectData>.projectCompilerArgumentsMapper
+        by NotNullableCopyableDataNodeUserDataProperty(Key.create("COMPILER_ARGUMENT_MAPPER"), CompilerArgumentsMapperWithMerge())
 
+var DataNode<ProjectData>.mppProjectCompilerArgumentsMapper
+        by NotNullableCopyableDataNodeUserDataProperty(Key.create("MPP_COMPILER_ARGUMENT_MAPPER"), CompilerArgumentsMapperWithMerge())
 
 class KotlinGradleProjectResolverExtension : AbstractProjectResolverExtension() {
     val isAndroidProjectKey = Key.findKeyByName("IS_ANDROID_PROJECT_KEY")
@@ -240,7 +242,7 @@ class KotlinGradleProjectResolverExtension : AbstractProjectResolverExtension() 
         ideModule.coroutines = gradleModel.coroutines
         ideModule.platformPluginId = gradleModel.platformPluginId
         with(gradleModel.compilerArgumentsMapper) {
-            ideProject.projectCompilerArgumentMapperContainer.mergeArgumentsFromMapper(this)
+            ideProject.projectCompilerArgumentsMapper.mergeMapper(this)
             clear()
         }
 

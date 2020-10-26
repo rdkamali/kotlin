@@ -60,7 +60,6 @@ import org.jetbrains.kotlin.platform.IdePlatformKind
 import org.jetbrains.kotlin.platform.impl.isCommon
 import org.jetbrains.kotlin.platform.impl.isJavaScript
 import org.jetbrains.kotlin.platform.impl.isJvm
-import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.psi.UserDataProperty
 import org.jetbrains.plugins.gradle.model.data.BuildScriptClasspathData
 import org.jetbrains.plugins.gradle.model.data.GradleSourceSetData
@@ -290,7 +289,7 @@ fun configureFacetByGradleModule(
     ideModule.hasExternalSdkConfiguration = sourceSetNode?.data?.sdkName != null
 
     val projectDataNode = moduleNode.getDataNode(ProjectKeys.PROJECT) ?: return null
-    val generalMapper = projectDataNode.projectCompilerArgumentMapperContainer.projectCompilerArgumentsMapper
+    val generalMapper = projectDataNode.projectCompilerArgumentsMapper
 
     val cachedArgsInfo = moduleNode.cachedCompilerArgumentsBySourceSet?.get(sourceSetName ?: "main")
     if (cachedArgsInfo != null) {
@@ -350,7 +349,7 @@ private fun getExplicitOutputPath(moduleNode: DataNode<ModuleData>, platformKind
     }
 
     val projectDataNode = moduleNode.getDataNode(ProjectKeys.PROJECT) ?: return null
-    val generalMapper = projectDataNode.projectCompilerArgumentMapperContainer.projectCompilerArgumentsMapper
+    val generalMapper = projectDataNode.projectCompilerArgumentsMapper
 
     val k2jsArgumentList = moduleNode.cachedCompilerArgumentsBySourceSet?.get(sourceSet)
         ?.currentCompilerArgumentsBucket?.let { CachedToRawCompilerArgumentsBucketConverter(generalMapper).convert(it) }

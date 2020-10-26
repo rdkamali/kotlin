@@ -15,10 +15,13 @@ import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil
 import com.intellij.openapi.util.Key
 import com.intellij.serialization.PropertyMapping
 import com.intellij.util.containers.MultiMap
+import org.jetbrains.kotlin.caching.CachedArgsInfo
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.config.ExternalSystemRunTask
 import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.idea.util.CopyableDataNodeUserDataProperty
+import org.jetbrains.kotlin.idea.util.NotNullableCopyableDataNodeUserDataProperty
+import org.jetbrains.plugins.gradle.model.data.GradleSourceSetData
 import org.jetbrains.plugins.gradle.util.GradleConstants
 import java.io.File
 import java.io.Serializable
@@ -28,7 +31,20 @@ var DataNode<out ModuleData>.kotlinSourceSet: KotlinSourceSetInfo?
         by CopyableDataNodeUserDataProperty(Key.create("KOTLIN_SOURCE_SET"))
 
 val DataNode<ModuleData>.kotlinAndroidSourceSets: List<KotlinSourceSetInfo>?
-        get() = ExternalSystemApiUtil.getChildren(this, KotlinAndroidSourceSetData.KEY).firstOrNull()?.data?.sourceSetInfos
+    get() = ExternalSystemApiUtil.getChildren(this, KotlinAndroidSourceSetData.KEY).firstOrNull()?.data?.sourceSetInfos
+
+typealias CachedCompilerArgumentByCompilation = MutableMap<KotlinCompilation, CachedArgsInfo>
+typealias KotlinSourceSetInfoByCompilation = MutableMap<KotlinCompilation, KotlinSourceSetInfo?>
+typealias CompilationDataByCompilation = MutableMap<KotlinCompilation, GradleSourceSetData?>
+
+var DataNode<ModuleData>.cachedCompilerArgumentsByCompilation: CachedCompilerArgumentByCompilation
+        by NotNullableCopyableDataNodeUserDataProperty(Key.create("MPP_CACHED_COMPILER_ARGUMENTS"), mutableMapOf())
+
+var DataNode<ModuleData>.compilationDataByCompilation: CompilationDataByCompilation
+        by NotNullableCopyableDataNodeUserDataProperty(Key.create("COMPILATION_DATA_BY_COMPILATION"), mutableMapOf())
+
+var DataNode<ModuleData>.kotlinSourceSetInfoByCompilation: KotlinSourceSetInfoByCompilation
+        by NotNullableCopyableDataNodeUserDataProperty(Key.create("MPP_SOURCE_SET_INFOS"), mutableMapOf())
 
 class KotlinSourceSetInfo @PropertyMapping("kotlinModule") constructor(val kotlinModule: KotlinModule) : Serializable {
     var moduleId: String? = null
@@ -52,7 +68,8 @@ class KotlinSourceSetInfo @PropertyMapping("kotlinModule") constructor(val kotli
     var externalSystemRunTasks: Collection<ExternalSystemRunTask> = emptyList()
 }
 
-class KotlinAndroidSourceSetData @PropertyMapping("sourceSetInfos") constructor(val sourceSetInfos: List<KotlinSourceSetInfo>
+class KotlinAndroidSourceSetData @PropertyMapping("sourceSetInfos") constructor(
+    val sourceSetInfos: List<KotlinSourceSetInfo>
 ) : AbstractExternalEntityData(GradleConstants.SYSTEM_ID) {
     companion object {
         val KEY = ExternalKey.create(KotlinAndroidSourceSetData::class.java, KotlinTargetData.KEY.processingWeight + 1)
