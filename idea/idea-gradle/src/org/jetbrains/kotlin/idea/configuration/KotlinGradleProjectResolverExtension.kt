@@ -241,10 +241,6 @@ class KotlinGradleProjectResolverExtension : AbstractProjectResolverExtension() 
         ideModule.cachedCompilerArgumentsBySourceSet = gradleModel.cachedCompilerArgumentsBySourceSet.deepCopy()
         ideModule.coroutines = gradleModel.coroutines
         ideModule.platformPluginId = gradleModel.platformPluginId
-        with(gradleModel.compilerArgumentsMapper) {
-            ideProject.projectCompilerArgumentsMapper.mergeMapper(this)
-            clear()
-        }
 
         if (gradleModel.hasKotlinPlugin) {
             KotlinFUSLogger.log(FUSEventGroups.GradleTarget, gradleModel.kotlinTarget ?: "unknown")
@@ -316,6 +312,13 @@ class KotlinGradleProjectResolverExtension : AbstractProjectResolverExtension() 
                     gradleModelPureKotlinSourceFolders
                 else
                     gradleModelPureKotlinSourceFolders + ideModule.pureKotlinSourceFolders
+
+            with(gradleModel.compilerArgumentsMapper) {
+                val ideProject = ideModule.getDataNode(ProjectKeys.PROJECT)!!
+                ideProject.projectCompilerArgumentsMapper.mergeMapper(this)
+                clear()
+            }
+
 
             val gradleSourceSets = ideModule.children.filter { it.data is GradleSourceSetData } as Collection<DataNode<GradleSourceSetData>>
             for (gradleSourceSetNode in gradleSourceSets) {
