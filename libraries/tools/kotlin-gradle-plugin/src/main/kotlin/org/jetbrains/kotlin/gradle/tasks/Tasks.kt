@@ -33,9 +33,6 @@ import org.jetbrains.kotlin.gradle.internal.*
 import org.jetbrains.kotlin.gradle.internal.tasks.TaskWithLocalState
 import org.jetbrains.kotlin.gradle.internal.tasks.allOutputFiles
 import org.jetbrains.kotlin.gradle.logging.*
-import org.jetbrains.kotlin.caching.CompilerArgumentsSplitter
-import org.jetbrains.kotlin.caching.K2JSCompilerArgumentsSplitter
-import org.jetbrains.kotlin.caching.K2JVMCompilerArgumentsSplitter
 import org.jetbrains.kotlin.gradle.plugin.COMPILER_CLASSPATH_CONFIGURATION_NAME
 import org.jetbrains.kotlin.gradle.plugin.KotlinMultiplatformPluginWrapper
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformPluginBase
@@ -587,8 +584,6 @@ open class KotlinCompile : AbstractKotlinCompile<K2JVMCompilerArguments>(), Kotl
         sourceRootsContainer.add(*sources)
         return super.source(*sources)
     }
-
-    override fun compilerArgumentsSplitter(): CompilerArgumentsSplitter<K2JVMCompilerArguments> = K2JVMCompilerArgumentsSplitter()
 }
 
 @CacheableTask
@@ -768,6 +763,4 @@ open class Kotlin2JsCompile : AbstractKotlinCompile<K2JSCompilerArguments>(), Ko
         )
         compilerRunner.runJsCompilerAsync(sourceRoots.kotlinSourceFiles, commonSourceSet.toList(), args, environment)
     }
-
-    override fun compilerArgumentsSplitter(): CompilerArgumentsSplitter<K2JSCompilerArguments> = K2JSCompilerArgumentsSplitter()
 }

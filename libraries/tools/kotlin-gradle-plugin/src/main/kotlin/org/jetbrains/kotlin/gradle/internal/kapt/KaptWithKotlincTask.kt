@@ -6,17 +6,14 @@
 package org.jetbrains.kotlin.gradle.internal
 
 import com.intellij.openapi.util.SystemInfo
-import com.intellij.util.PathUtil
 import org.gradle.api.GradleException
 import org.gradle.api.file.FileCollection
-import org.gradle.api.internal.file.DefaultFileCollectionFactory
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.incremental.IncrementalTaskInputs
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
-import org.jetbrains.kotlin.cli.common.arguments.copyBean
 import org.jetbrains.kotlin.compilerRunner.ArgumentUtils
 import org.jetbrains.kotlin.compilerRunner.GradleCompilerEnvironment
 import org.jetbrains.kotlin.compilerRunner.GradleCompilerRunner
@@ -25,8 +22,6 @@ import org.jetbrains.kotlin.gradle.internal.kapt.incremental.KaptIncrementalChan
 import org.jetbrains.kotlin.gradle.internal.tasks.allOutputFiles
 import org.jetbrains.kotlin.gradle.logging.GradleKotlinLogger
 import org.jetbrains.kotlin.gradle.logging.GradlePrintingMessageCollector
-import org.jetbrains.kotlin.caching.CompilerArgumentsSplitter
-import org.jetbrains.kotlin.caching.K2JVMCompilerArgumentsSplitter
 import org.jetbrains.kotlin.gradle.plugin.PLUGIN_CLASSPATH_CONFIGURATION_NAME
 import org.jetbrains.kotlin.gradle.tasks.CompilerPluginOptions
 import org.jetbrains.kotlin.gradle.tasks.GradleCompileTaskProvider
@@ -131,6 +126,4 @@ abstract class KaptWithKotlincTask : KaptTask(), CompilerArgumentAwareWithInput<
 
     private val isAtLeastJava9: Boolean
         get() = SystemInfo.isJavaVersionAtLeast(9, 0, 0)
-
-    override fun compilerArgumentsSplitter(): CompilerArgumentsSplitter<K2JVMCompilerArguments> = K2JVMCompilerArgumentsSplitter()
 }

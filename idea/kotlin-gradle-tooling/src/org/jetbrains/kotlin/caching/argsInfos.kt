@@ -27,7 +27,7 @@ class FlatArgsInfoImpl(
     constructor(flatArgsInfo: FlatArgsInfo) : this(
         FlatCompilerArgumentsBucket(flatArgsInfo.currentCompilerArgumentsBucket),
         FlatCompilerArgumentsBucket(flatArgsInfo.defaultCompilerArgumentsBucket),
-        arrayOf(*flatArgsInfo.dependencyClasspath)
+        flatArgsInfo.dependencyClasspath.toList()
     )
 }
 
@@ -45,7 +45,7 @@ class CachedArgsInfoImpl(
     constructor(cachedArgsInfo: CachedArgsInfo) : this(
         CachedCompilerArgumentsBucket(cachedArgsInfo.currentCompilerArgumentsBucket),
         CachedCompilerArgumentsBucket(cachedArgsInfo.defaultCompilerArgumentsBucket),
-        arrayOf(*cachedArgsInfo.dependencyClasspath)
+        cachedArgsInfo.dependencyClasspath.toList()
     )
 }
 

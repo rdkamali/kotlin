@@ -20,7 +20,37 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.jetbrains.kotlin.cli.common.arguments.*
 import org.jetbrains.kotlin.compilerRunner.ArgumentUtils
-import org.jetbrains.kotlin.caching.CompilerArgumentsSplitter
+import java.io.File
+
+@Suppress("UNCHECKED_CAST")
+private fun <T : CommonToolArguments> divideCompilerArguments(compArgs: T): List<List<String>> = when (compArgs) {
+    is K2JVMCompilerArguments -> {
+        val classpathParts = compArgs.classpath?.split(File.pathSeparator)?.map { it.replace('\\', '/') }.orEmpty()
+            .also { compArgs.classpath = null }
+        val pluginClasspaths = compArgs.pluginClasspaths?.map { it.replace('\\', '/') }.orEmpty()
+            .also { compArgs.pluginClasspaths = null }
+        val friendPaths = compArgs.friendPaths?.map { it.replace('\\', '/') }.orEmpty()
+            .also { compArgs.friendPaths = null }
+        listOf(ArgumentUtils.convertArgumentsToStringList(compArgs), classpathParts, pluginClasspaths, friendPaths)
+    }
+    is K2MetadataCompilerArguments -> {
+        val classpathParts = compArgs.classpath?.split(File.pathSeparator)?.map { it.replace('\\', '/') }.orEmpty()
+            .also { compArgs.classpath = null }
+        val pluginClasspaths = compArgs.pluginClasspaths?.map { it.replace('\\', '/') }.orEmpty()
+            .also { compArgs.pluginClasspaths = null }
+        val friendPaths = compArgs.friendPaths?.map { it.replace('\\', '/') }.orEmpty()
+            .also { compArgs.friendPaths = null }
+        listOf(ArgumentUtils.convertArgumentsToStringList(compArgs), classpathParts, pluginClasspaths, friendPaths)
+    }
+    is CommonCompilerArguments -> {
+        val pluginClasspaths = compArgs.pluginClasspaths?.map { it.replace('\\', '/') }.orEmpty()
+            .also { compArgs.pluginClasspaths = null }
+        listOf(ArgumentUtils.convertArgumentsToStringList(compArgs), emptyList(), pluginClasspaths, emptyList())
+    }
+    else -> {
+        listOf(ArgumentUtils.convertArgumentsToStringList(compArgs), emptyList(), emptyList(), emptyList())
+    }
+}
 
 interface CompilerArgumentAware<T : CommonToolArguments> {
     val serializedCompilerArguments: List<String>
@@ -37,17 +67,14 @@ interface CompilerArgumentAware<T : CommonToolArguments> {
     val filteredArgumentsMap: Map<String, String>
         get() = CompilerArgumentsGradleInput.createInputsMap(prepareCompilerArguments())
 
-    val serializedCompilerArgumentsForBucket: Array<Array<String>>
-        get() = compilerArgumentsSplitter().splitCompilerArguments(prepareCompilerArguments(ignoreClasspathResolutionErrors = true))
+    val serializedCompilerArgumentsForBucket: List<List<String>>
+        get() = divideCompilerArguments(prepareCompilerArguments())
 
-    val defaultSerializedCompilerArgumentsForBucket: Array<Array<String>>
-        get() = createCompilerArgs().also { setupCompilerArgs(it, defaultsOnly = true) }.let {
-            compilerArgumentsSplitter().splitCompilerArguments(it)
-        }
+    val defaultSerializedCompilerArgumentsForBucket: List<List<String>>
+        get() = divideCompilerArguments(createCompilerArgs().also { setupCompilerArgs(it, defaultsOnly = true) })
 
     fun createCompilerArgs(): T
     fun setupCompilerArgs(args: T, defaultsOnly: Boolean = false, ignoreClasspathResolutionErrors: Boolean = false)
-    fun compilerArgumentsSplitter(): CompilerArgumentsSplitter<T>
 }
 
 internal fun <T : CommonToolArguments> CompilerArgumentAware<T>.prepareCompilerArguments(ignoreClasspathResolutionErrors: Boolean = false) =
@@ -71,10 +98,10 @@ interface CompilerArgumentAwareWithInput<T : CommonToolArguments> : CompilerArgu
         get() = super.filteredArgumentsMap
 
     @get:Internal
-    override val serializedCompilerArgumentsForBucket: Array<Array<String>>
+    override val serializedCompilerArgumentsForBucket: List<List<String>>
         get() = super.serializedCompilerArgumentsForBucket
 
     @get:Internal
-    override val defaultSerializedCompilerArgumentsForBucket: Array<Array<String>>
+    override val defaultSerializedCompilerArgumentsForBucket: List<List<String>>
         get() = super.defaultSerializedCompilerArgumentsForBucket
 }

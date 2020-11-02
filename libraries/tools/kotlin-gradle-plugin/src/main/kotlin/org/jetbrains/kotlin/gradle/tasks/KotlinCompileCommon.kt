@@ -30,8 +30,6 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformCommonOptionsImpl
 import org.jetbrains.kotlin.gradle.dsl.fillDefaultValues
 import org.jetbrains.kotlin.gradle.internal.tasks.allOutputFiles
 import org.jetbrains.kotlin.gradle.logging.GradlePrintingMessageCollector
-import org.jetbrains.kotlin.caching.CompilerArgumentsSplitter
-import org.jetbrains.kotlin.caching.K2MetadataCompilerArgumentsSplitter
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinCommonCompilation
 import org.jetbrains.kotlin.gradle.utils.getValue
@@ -106,6 +104,4 @@ open class KotlinCompileCommon : AbstractKotlinCompile<K2MetadataCompilerArgumen
         )
         compilerRunner.runMetadataCompilerAsync(sourceRoots.kotlinSourceFiles, args, environment)
     }
-
-    override fun compilerArgumentsSplitter(): CompilerArgumentsSplitter<K2MetadataCompilerArguments> = K2MetadataCompilerArgumentsSplitter()
 }

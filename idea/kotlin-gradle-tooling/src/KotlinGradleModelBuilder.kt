@@ -140,9 +140,9 @@ class KotlinGradleModelBuilder : AbstractKotlinGradleModelBuilder() {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun Task.getCompilerArgumentsForBucket(methodName: String): Array<Array<String>>? {
+    private fun Task.getCompilerArgumentsForBucket(methodName: String): List<List<String>>? {
         return try {
-            javaClass.getDeclaredMethod(methodName).invoke(this) as Array<Array<String>>
+            javaClass.getDeclaredMethod(methodName).invoke(this) as List<List<String>>
         } catch (e: Exception) {
             // No argument accessor method is available
             null
@@ -217,7 +217,7 @@ class KotlinGradleModelBuilder : AbstractKotlinGradleModelBuilder() {
                 FlatToCachedCompilerArgumentsBucketConverter(modelDetachableMapper).convert(defaultCompilerArgumentsForBucket)
             val dependencyClasspath = compileTask.getDependencyClasspath()
             val dependencyClasspathCacheIds =
-                dependencyClasspath.map { modelDetachableMapper.cacheArgument(it) }.toTypedArray()
+                dependencyClasspath.map { modelDetachableMapper.cacheArgument(it) }
             cachedArgumentsBySourceSet[sourceSetName] = CachedArgsInfoImpl(
                 currentCompilerArgumentsBucket,
                 defaultCompilerArgumentsBucket,

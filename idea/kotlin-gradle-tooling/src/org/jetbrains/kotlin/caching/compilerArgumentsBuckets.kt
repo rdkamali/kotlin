@@ -8,8 +8,8 @@ package org.jetbrains.kotlin.caching
 import java.io.Serializable
 
 typealias CachedArgumentIdType = Int
-typealias ClasspathArgumentCacheIdType = Array<Int>
-typealias ClasspathArgumentsType = Array<String>
+typealias ClasspathArgumentCacheIdType = List<Int>
+typealias ClasspathArgumentsType = List<String>
 typealias RawCompilerArgumentsBucket = List<String>
 
 interface CompilerArgumentsBucket<T> : Serializable {
@@ -20,29 +20,29 @@ interface CompilerArgumentsBucket<T> : Serializable {
 }
 
 class CachedCompilerArgumentsBucket(
-    override val generalArguments: Array<Int>,
-    override val classpathParts: Array<Int>,
-    override val pluginClasspaths: Array<Int>,
-    override val friendPaths: Array<Int>
-) : CompilerArgumentsBucket<Array<Int>> {
+    override val generalArguments: List<Int>,
+    override val classpathParts: List<Int>,
+    override val pluginClasspaths: List<Int>,
+    override val friendPaths: List<Int>
+) : CompilerArgumentsBucket<List<Int>> {
     constructor(otherBucket: CachedCompilerArgumentsBucket) : this(
-        arrayOf(*otherBucket.generalArguments),
-        arrayOf(*otherBucket.classpathParts),
-        arrayOf(*otherBucket.pluginClasspaths),
-        arrayOf(*otherBucket.friendPaths)
+        otherBucket.generalArguments.toList(),
+        otherBucket.classpathParts.toList(),
+        otherBucket.pluginClasspaths.toList(),
+        otherBucket.friendPaths.toList()
     )
 }
 
 class FlatCompilerArgumentsBucket(
-    override val generalArguments: Array<String>,
-    override val classpathParts: Array<String>,
-    override val pluginClasspaths: Array<String>,
-    override val friendPaths: Array<String>
-) : CompilerArgumentsBucket<Array<String>> {
+    override val generalArguments: List<String>,
+    override val classpathParts: List<String>,
+    override val pluginClasspaths: List<String>,
+    override val friendPaths: List<String>
+) : CompilerArgumentsBucket<List<String>> {
     constructor(otherBucket: FlatCompilerArgumentsBucket) : this(
-        arrayOf(*otherBucket.generalArguments),
-        arrayOf(*otherBucket.classpathParts),
-        arrayOf(*otherBucket.pluginClasspaths),
-        arrayOf(*otherBucket.friendPaths)
+        otherBucket.generalArguments.toList(),
+        otherBucket.classpathParts.toList(),
+        otherBucket.pluginClasspaths.toList(),
+        otherBucket.friendPaths.toList()
     )
 }

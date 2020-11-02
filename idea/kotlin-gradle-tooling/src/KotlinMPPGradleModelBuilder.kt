@@ -544,7 +544,8 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         // The 'targetName' of a test task matches the target disambiguation classifier, potentially with suffix, e.g. jsBrowser
         val getTargetName = kotlinTestTaskClass.getDeclaredMethodOrNull("getTargetName") ?: return emptyList()
 
-        val jvmTestTaskClass = gradleTarget.testTaskClass("org.jetbrains.kotlin.gradle.targets.jvm.tasks.KotlinJvmTest") ?: return emptyList()
+        val jvmTestTaskClass =
+            gradleTarget.testTaskClass("org.jetbrains.kotlin.gradle.targets.jvm.tasks.KotlinJvmTest") ?: return emptyList()
         val getJvmTargetName = jvmTestTaskClass.getDeclaredMethodOrNull("getTargetName") ?: return emptyList()
 
         if (targetDisambiguationClassifier == "android") {
@@ -769,8 +770,8 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
     } ?: emptyList()
 
     @Suppress("UNCHECKED_CAST")
-    private fun safelyGetArgumentsForBucket(compileKotlinTask: Task, accessor: Method?): Array<Array<String>>? = try {
-        accessor?.invoke(compileKotlinTask) as? Array<Array<String>>
+    private fun safelyGetArgumentsForBucket(compileKotlinTask: Task, accessor: Method?): List<List<String>>? = try {
+        accessor?.invoke(compileKotlinTask) as? List<List<String>>
     } catch (e: Exception) {
         logger.info(e.message ?: "Unexpected exception: $e", e)
         null
@@ -785,7 +786,7 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         return CachedArgsInfoImpl(
             RawToCachedCompilerArgumentsBucketConverter(compilerArgumentsMapper).convert(compilationArguments.currentArguments.toList()),
             RawToCachedCompilerArgumentsBucketConverter(compilerArgumentsMapper).convert(compilationArguments.defaultArguments.toList()),
-            dependencyClasspath.map { compilerArgumentsMapper.cacheArgument(it) }.toTypedArray()
+            dependencyClasspath.map { compilerArgumentsMapper.cacheArgument(it) }
         )
     }
 
@@ -806,13 +807,13 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         val defaultArgumentsForBucket = compileTaskClass.getMethodOrNull("getDefaultSerializedCompilerArgumentsForBucket")
             ?.let { safelyGetArgumentsForBucket(compileKotlinTask, it) }
             ?.let { FlatCompilerArgumentsBucket(it[0], it[1], it[2], it[3]) }
-            ?: FlatCompilerArgumentsBucket(emptyArray(), emptyArray(), emptyArray(), emptyArray())
+            ?: FlatCompilerArgumentsBucket(emptyList(), emptyList(), emptyList(), emptyList())
         val dependencyClasspath = buildDependencyClasspath(compileKotlinTask)
         return with(FlatToCachedCompilerArgumentsBucketConverter(compilerArgumentsMapper)) {
             CachedArgsInfoImpl(
                 convert(currentFlatArgumentsBucket),
                 convert(defaultArgumentsForBucket),
-                dependencyClasspath.map { compilerArgumentsMapper.cacheArgument(it) }.toTypedArray()
+                dependencyClasspath.map { compilerArgumentsMapper.cacheArgument(it) }
             )
         }
     }

@@ -320,7 +320,7 @@ private fun configureFacetByCachedCompilerArguments(
     val (flatCurrentArguments, flatDefaultArguments) = with(CachedToFlatCompilerArgumentsBucketConverter(mapper)) {
         convert(cachedArgsInfo.currentCompilerArgumentsBucket) to convert(cachedArgsInfo.defaultCompilerArgumentsBucket)
     }
-    val dependencyClasspath = cachedArgsInfo.dependencyClasspath.map { mapper.getArgument(it) }.toTypedArray()
+    val dependencyClasspath = cachedArgsInfo.dependencyClasspath.map { mapper.getArgument(it) }
     val flatArgsInfo = FlatArgsInfoImpl(flatCurrentArguments, flatDefaultArguments, dependencyClasspath)
     configureFacetByFlatArgsInfo(kotlinFacet, flatArgsInfo, modelsProvider)
 }

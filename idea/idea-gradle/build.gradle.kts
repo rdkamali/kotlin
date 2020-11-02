@@ -17,6 +17,7 @@ dependencies {
     compile(project(":js:js.frontend"))
 
     compile(project(":native:frontend.native"))
+    compile(project(":compiler:cli-common"))
 
     compileOnly(intellijDep())
     compileOnly(intellijPluginDep("gradle"))

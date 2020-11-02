@@ -20,10 +20,10 @@ interface CompilerArgumentsBucketConverter<From, To> {
 class CachedToFlatCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<CachedCompilerArgumentsBucket, FlatCompilerArgumentsBucket> {
     override fun convert(from: CachedCompilerArgumentsBucket): FlatCompilerArgumentsBucket {
-        val cachedGeneralArguments = from.generalArguments.map { mapper.getArgument(it) }.toTypedArray()
-        val cachedClasspath = from.classpathParts.map { mapper.getArgument(it) }.toTypedArray()
-        val cachedPluginClasspath = from.pluginClasspaths.map { mapper.getArgument(it) }.toTypedArray()
-        val cachedFriendPaths = from.friendPaths.map { mapper.getArgument(it) }.toTypedArray()
+        val cachedGeneralArguments = from.generalArguments.map { mapper.getArgument(it) }
+        val cachedClasspath = from.classpathParts.map { mapper.getArgument(it) }
+        val cachedPluginClasspath = from.pluginClasspaths.map { mapper.getArgument(it) }
+        val cachedFriendPaths = from.friendPaths.map { mapper.getArgument(it) }
         return FlatCompilerArgumentsBucket(cachedGeneralArguments, cachedClasspath, cachedPluginClasspath, cachedFriendPaths)
     }
 }
@@ -62,15 +62,15 @@ class RawToFlatCompilerArgumentsBucketConverter :
         }
 
         // TODO(ychernyshev) Does the order of arguments required here?
-        val generalArguments = (from - pluginClasspathArgument - friendPathsArgument - classpathArgument).filterNotNull().toTypedArray()
+        val generalArguments = (from - pluginClasspathArgument - friendPathsArgument - classpathArgument).filterNotNull()
         val classpathArguments = if (classpathArgument.isNotEmpty())
-            mutableListOf(classpathArgument.first()).apply { addAll(classpathArgument.last().split(File.pathSeparator)) }.toTypedArray()
-        else emptyArray()
+            mutableListOf(classpathArgument.first()).apply { addAll(classpathArgument.last().split(File.pathSeparator)) }
+        else emptyList()
 
         val pluginClasspaths =
-            pluginClasspathArgument?.removePrefix(PLUGIN_CLASSPATH_PREFIX)?.split(",")?.toTypedArray() ?: emptyArray()
+            pluginClasspathArgument?.removePrefix(PLUGIN_CLASSPATH_PREFIX)?.split(",").orEmpty()
 
-        val friendPaths = friendPathsArgument?.removePrefix(FRIEND_PATH_PREFIX)?.split(",")?.toTypedArray() ?: emptyArray()
+        val friendPaths = friendPathsArgument?.removePrefix(FRIEND_PATH_PREFIX)?.split(",").orEmpty()
 
         return FlatCompilerArgumentsBucket(generalArguments, classpathArguments, pluginClasspaths, friendPaths)
     }
@@ -79,10 +79,10 @@ class RawToFlatCompilerArgumentsBucketConverter :
 class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<FlatCompilerArgumentsBucket, CachedCompilerArgumentsBucket> {
     override fun convert(from: FlatCompilerArgumentsBucket): CachedCompilerArgumentsBucket {
-        val generalArguments = from.generalArguments.map { mapper.cacheArgument(it) }.toTypedArray()
-        val classpathParts = from.classpathParts.map { mapper.cacheArgument(it) }.toTypedArray()
-        val pluginClasspaths = from.pluginClasspaths.map { mapper.cacheArgument(it) }.toTypedArray()
-        val friendPaths = from.friendPaths.map { mapper.cacheArgument(it) }.toTypedArray()
+        val generalArguments = from.generalArguments.map { mapper.cacheArgument(it) }
+        val classpathParts = from.classpathParts.map { mapper.cacheArgument(it) }
+        val pluginClasspaths = from.pluginClasspaths.map { mapper.cacheArgument(it) }
+        val friendPaths = from.friendPaths.map { mapper.cacheArgument(it) }
         return CachedCompilerArgumentsBucket(generalArguments, classpathParts, pluginClasspaths, friendPaths)
     }
 }
