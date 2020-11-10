@@ -133,3 +133,11 @@ public actual annotation class JvmSuppressWildcards(actual val suppress: Boolean
 @Retention(AnnotationRetention.BINARY)
 @MustBeDocumented
 public actual annotation class JvmWildcard
+
+/**
+ * Specifies that given val class is inline class.
+ */
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.BINARY)
+@MustBeDocumented
+public actual annotation class JvmInline

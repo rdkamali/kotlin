@@ -101,7 +101,13 @@ public expect annotation class JvmSuppressWildcards(val suppress: Boolean = true
 @OptionalExpectation
 public expect annotation class JvmWildcard()
 
-
+/**
+ * Specifies that given val class is inline class.
+ */
+@Target(AnnotationTarget.CLASS)
+@MustBeDocumented
+@OptionalExpectation
+public expect annotation class JvmInline
 
 /**
  * Marks the JVM backing field of the annotated property as `volatile`, meaning that writes to this field
