@@ -16,6 +16,9 @@ import com.intellij.openapi.util.Key
 import com.intellij.serialization.PropertyMapping
 import com.intellij.util.containers.MultiMap
 import org.jetbrains.kotlin.caching.CachedArgsInfo
+import org.jetbrains.kotlin.caching.CachedCompilerArgumentsBucket
+import org.jetbrains.kotlin.caching.CompilerArgumentsBucket
+import org.jetbrains.kotlin.caching.CompilerArgumentsMapper
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.config.ExternalSystemRunTask
 import org.jetbrains.kotlin.gradle.*
@@ -57,11 +60,23 @@ class KotlinSourceSetInfo @PropertyMapping("kotlinModule") constructor(val kotli
         get() = actualPlatforms.getSinglePlatform()
 
     @Transient
-    var defaultCompilerArguments: CommonCompilerArguments? = null
+    var defaultCompilerArgumentsInitializer: (() -> CommonCompilerArguments)? = null
+
+    val defaultCompilerArguments: CommonCompilerArguments?
+        get() = defaultCompilerArgumentsInitializer?.invoke()
 
     @Transient
-    var compilerArguments: CommonCompilerArguments? = null
-    var dependencyClasspath: List<String> = emptyList()
+    var compilerArgumentsInitializer: (() -> CommonCompilerArguments)? = null
+
+    val compilerArguments: CommonCompilerArguments?
+        get() = compilerArgumentsInitializer?.invoke()
+
+    @Transient
+    var dependencyClasspathInitializer: (() -> List<String>)? = null
+
+    val dependencyClasspath: List<String>
+        get() = dependencyClasspathInitializer?.invoke() ?: emptyList()
+
     var isTestModule: Boolean = false
     var sourceSetIdsByName: MutableMap<String, String> = LinkedHashMap()
     var dependsOn: List<String> = emptyList()

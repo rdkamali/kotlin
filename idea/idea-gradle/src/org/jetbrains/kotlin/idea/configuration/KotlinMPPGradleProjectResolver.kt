@@ -31,10 +31,7 @@ import org.gradle.tooling.model.idea.IdeaContentRoot
 import org.gradle.tooling.model.idea.IdeaModule
 import org.jetbrains.annotations.NonNls
 import org.jetbrains.kotlin.caching.*
-import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
-import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
-import org.jetbrains.kotlin.cli.common.arguments.ManualLanguageFeatureSetting
-import org.jetbrains.kotlin.cli.common.arguments.parseCommandLineArguments
+import org.jetbrains.kotlin.cli.common.arguments.*
 import org.jetbrains.kotlin.config.ExternalSystemNativeMainRunTask
 import org.jetbrains.kotlin.config.ExternalSystemRunTask
 import org.jetbrains.kotlin.config.ExternalSystemTestRunTask
@@ -63,6 +60,7 @@ import java.lang.reflect.Proxy
 import java.util.*
 import java.util.stream.Collectors
 import kotlin.collections.HashMap
+import kotlin.reflect.KProperty1
 
 @Order(ExternalSystemConstants.UNORDERED + 1)
 open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionCompat() {
@@ -273,24 +271,47 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
         ) {
             val compilations = targets.flatMap { it.compilations }
             for (compilation in compilations) {
-                val name = compilation.name
                 val kotlinSourceSetInfo = ideModule.kotlinSourceSetInfoByCompilation[compilation] ?: continue
                 val cachedArgsInfo = ideModule.cachedCompilerArgumentsByCompilation[compilation] ?: continue
                 val mppMapper = ideProject.mppProjectCompilerArgumentsMapper ?: return
                 with(CachedToRawCompilerArgumentsBucketConverter(mppMapper)) {
-                    kotlinSourceSetInfo.compilerArguments = convert(cachedArgsInfo.currentCompilerArgumentsBucket).let {
-                        createCompilerArguments(it, compilation.platform, isMultiplatform = true)
+                    kotlinSourceSetInfo.compilerArgumentsInitializer = {
+                        convert(cachedArgsInfo.currentCompilerArgumentsBucket).let {
+                            createCompilerArguments(it, compilation.platform, isMultiplatform = true)
+                        }
                     }
-                    kotlinSourceSetInfo.defaultCompilerArguments = convert(cachedArgsInfo.defaultCompilerArgumentsBucket).let {
-                        createCompilerArguments(it, compilation.platform, isMultiplatform = true)
+                    kotlinSourceSetInfo.defaultCompilerArgumentsInitializer = {
+                        convert(cachedArgsInfo.defaultCompilerArgumentsBucket).let {
+                            createCompilerArguments(it, compilation.platform, isMultiplatform = true)
+                        }
                     }
-                    kotlinSourceSetInfo.dependencyClasspath = cachedArgsInfo.dependencyClasspath.map { mppMapper.getArgument(it) }
+                    kotlinSourceSetInfo.dependencyClasspathInitializer = {
+                        cachedArgsInfo.dependencyClasspath.map { mppMapper.getArgument(it) }
+                    }
 
                     if (compilation.platform == KotlinPlatform.JVM || compilation.platform == KotlinPlatform.ANDROID) {
                         ideModule.compilationDataByCompilation[compilation]?.targetCompatibility =
-                            (kotlinSourceSetInfo.compilerArguments as? K2JVMCompilerArguments)?.jvmTarget
+                            cachedArgsInfo.currentCompilerArgumentsBucket.extractGeneralArgument(
+                                K2JVMCompilerArguments::jvmTarget,
+                                mppMapper
+                            )
                     }
                 }
+            }
+        }
+
+        private fun <T : CommonToolArguments> CachedCompilerArgumentsBucket.extractGeneralArgument(
+            property: KProperty1<T, *>,
+            mapper: CompilerArgumentsMapper
+        ): String? {
+            val argumentAnno = property.annotations.firstOrNull { it is Argument } as? Argument ?: return null
+            val cacheMapping = mapper.copyCache()
+            val propertyName = argumentAnno.value
+            return if (argumentAnno.isAdvanced) {
+                cacheMapping.values.firstOrNull { it.startsWith(propertyName) }?.removePrefix("${propertyName}=")
+            } else {
+                val key = cacheMapping.entries.firstOrNull { it.value == propertyName }?.key
+                generalArguments.indexOf(key).let { generalArguments.getOrNull(it + 1) }?.let { mapper.getArgument(it) }
             }
         }
 
@@ -1044,7 +1065,7 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
                     getGradleModuleQualifiedName(resolverCtx, gradleModule, it)
                 }
                 //TODO(auskov): target flours are lost here
-                info.compilerArguments =
+                info.compilerArgumentsInitializer = {
                     createCompilerArguments(emptyList(), sourceSet.actualPlatforms.getSinglePlatform(), isMultiplatform = true).also {
                         it.languageVersion = languageSettings.languageVersion
                         it.apiVersion = languageSettings.apiVersion
@@ -1059,6 +1080,7 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
                         it.pluginClasspaths = languageSettings.compilerPluginClasspath.map(File::getPath).toTypedArray()
                         it.freeArgs = languageSettings.freeCompilerArgs.toMutableList()
                     }
+                }
             }
         }
 

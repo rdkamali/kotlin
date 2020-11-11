@@ -28,6 +28,7 @@ dependencies {
     runtimeOnly(project(":kotlin-coroutines-experimental-compat"))
 
     compileOnly(project(":kotlin-gradle-statistics"))
+    implementation(project(":kotlin-reflect"))
 
     compileOnly(intellijPluginDep("java"))
     testCompileOnly(intellijPluginDep("java"))
