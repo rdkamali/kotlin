@@ -51,7 +51,7 @@ class JsIrBackendContext(
     override val lateinitNullableFields
         get() = error("Use Mapping.lateInitFieldToNullableField instead")
 
-    val fileToInitialisationFuns: MutableMap<IrFile, IrSimpleFunction> = mutableMapOf()
+    val fileToInitialisationFuns: MutableMap<IrFile, IrSimpleFunction?> = mutableMapOf()
 
     override val extractedLocalClasses: MutableSet<IrClass> = hashSetOf()
 

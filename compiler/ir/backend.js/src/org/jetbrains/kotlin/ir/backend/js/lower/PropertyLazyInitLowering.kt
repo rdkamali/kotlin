@@ -48,9 +48,13 @@ class PropertyLazyInitLowering(
         val file = container.parent as? IrFile
             ?: return
 
-        val initFun = fileToInitialisationFuns[file]
-            ?: createInitialisationFunction(file)?.also { fileToInitialisationFuns[file] = it }
-            ?: return
+        val initFun = (if (file in fileToInitialisationFuns) {
+            fileToInitialisationFuns[file]
+        } else {
+            createInitialisationFunction(file).also {
+                fileToInitialisationFuns[file] = it
+            }
+        }) ?: return
 
         val initialisationCall = JsIrBuilder.buildCall(
             target = initFun.symbol,
