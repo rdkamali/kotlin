@@ -49,8 +49,8 @@ class CachedArgsInfoImpl(
     )
 }
 
-fun CachedArgsInfo.convertToFlat(mapper: ICompilerArgumentsMapper): FlatArgsInfo =
-    CachedToFlatCompilerArgumentsBucketConverter(mapper).let { cv ->
+fun CachedArgsInfo.convertToFlat(mapper: ICompilerArgumentsMapper, classLoader: ClassLoader): FlatArgsInfo =
+    CachedToFlatCompilerArgumentsBucketConverter(mapper, classLoader).let { cv ->
         FlatArgsInfoImpl(
             cv.convert(currentCompilerArgumentsBucket),
             cv.convert(defaultCompilerArgumentsBucket),

@@ -8,27 +8,16 @@ package org.jetbrains.kotlin.caching
 import org.jetbrains.kotlin.cli.common.arguments.Argument
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
+import org.jetbrains.kotlin.utils.addIfNotNull
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 import java.io.File
 
 interface CompilerArgumentsBucketConverter<From, To> {
+    val classLoader: ClassLoader?
     fun convert(from: From): To
 }
 
-private val pluginClasspathsArgument by lazy {
-    CommonCompilerArguments::pluginClasspaths.argumentAnnotation
-}
-
-private val friendPathsArgument by lazy {
-    K2JVMCompilerArguments::friendPaths.argumentAnnotation
-}
-
-private val classpathArgument by lazy {
-    K2JVMCompilerArguments::classpath.argumentAnnotation
-}
-
-
-class CachedToFlatCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
+class CachedToFlatCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper, override val classLoader: ClassLoader? = null) :
     CompilerArgumentsBucketConverter<CachedCompilerArgumentsBucket, FlatCompilerArgumentsBucket> {
     override fun convert(from: CachedCompilerArgumentsBucket): FlatCompilerArgumentsBucket {
         val cachedGeneralArguments = from.generalArguments.map { mapper.getArgument(it) }.toMutableList()
@@ -39,7 +28,7 @@ class CachedToFlatCompilerArgumentsBucketConverter(val mapper: ICompilerArgument
     }
 }
 
-class FlatToRawCompilerArgumentsBucketConverter :
+class FlatToRawCompilerArgumentsBucketConverter(override val classLoader: ClassLoader? = null) :
     CompilerArgumentsBucketConverter<FlatCompilerArgumentsBucket, RawCompilerArgumentsBucket> {
     override fun convert(from: FlatCompilerArgumentsBucket): RawCompilerArgumentsBucket = mutableListOf<String>().apply {
         addAll(from.generalArguments.toList())
@@ -47,43 +36,64 @@ class FlatToRawCompilerArgumentsBucketConverter :
             this@apply.add(first())
             this@apply.add(drop(1).joinToString(File.pathSeparator))
         }
-        from.pluginClasspaths.ifNotEmpty { add("${pluginClasspathsArgument.value}=${joinToString(pluginClasspathsArgument.delimiter)}") }
-        from.friendPaths.ifNotEmpty { add("${friendPathsArgument.value}=${joinToString(friendPathsArgument.delimiter)}") }
+        obtainArgumentAnnotationInfo(classLoader, COMMON_ARGUMENTS_CLASS, "pluginClasspaths")?.also {
+            from.pluginClasspaths.ifNotEmpty { add("${it.value}=${joinToString(it.delimiter)}") }
+        }
+        (obtainArgumentAnnotationInfo(classLoader, JVM_ARGUMENTS_CLASS, "friendPaths")
+            ?: obtainArgumentAnnotationInfo(classLoader, METADATA_ARGUMENTS_CLASS, "friendPaths"))?.also {
+            from.friendPaths.ifNotEmpty { add("${it.value}=${joinToString(it.delimiter)}") }
+        }
     }
 }
 
-class CachedToRawCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
+class CachedToRawCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper, override val classLoader: ClassLoader? = null) :
     CompilerArgumentsBucketConverter<CachedCompilerArgumentsBucket, RawCompilerArgumentsBucket> {
-    private val cachedToFlatCompilerArgumentsBucketConverter by lazy { CachedToFlatCompilerArgumentsBucketConverter(mapper) }
-    private val flatToRawCompilerArgumentsBucketConverter by lazy { FlatToRawCompilerArgumentsBucketConverter() }
+    private val cachedToFlatCompilerArgumentsBucketConverter by lazy { CachedToFlatCompilerArgumentsBucketConverter(mapper, classLoader) }
+    private val flatToRawCompilerArgumentsBucketConverter by lazy { FlatToRawCompilerArgumentsBucketConverter(classLoader) }
     override fun convert(from: CachedCompilerArgumentsBucket): RawCompilerArgumentsBucket =
         cachedToFlatCompilerArgumentsBucketConverter.convert(from).let {
             flatToRawCompilerArgumentsBucketConverter.convert(it)
         }
 }
 
-class RawToFlatCompilerArgumentsBucketConverter :
+class RawToFlatCompilerArgumentsBucketConverter(override val classLoader: ClassLoader? = null) :
     CompilerArgumentsBucketConverter<RawCompilerArgumentsBucket, FlatCompilerArgumentsBucket> {
     override fun convert(from: RawCompilerArgumentsBucket): FlatCompilerArgumentsBucket {
-        val existingPluginClasspaths = from.firstOrNull { it.startsWith(pluginClasspathsArgument.value) }
-        val existingFriendPaths = from.firstOrNull { it.startsWith(friendPathsArgument.value) }
-        val existingClasspaths = from.flatMapIndexed { index, s ->
-            if (s in setOf(classpathArgument.value, classpathArgument.shortName)) listOf(s, from[index + 1]) else emptyList()
+        val pluginClasspathsAnnotationInfo = obtainArgumentAnnotationInfo(classLoader, COMMON_ARGUMENTS_CLASS, "pluginClasspaths")
+        val existingPluginClasspaths = pluginClasspathsAnnotationInfo?.let {
+            from.firstOrNull { it1 -> it1.startsWith(it.value) }
+        }
+
+        val friendPathsAnnotationInfo = (obtainArgumentAnnotationInfo(classLoader, JVM_ARGUMENTS_CLASS, "friendPaths")
+            ?: obtainArgumentAnnotationInfo(classLoader, METADATA_ARGUMENTS_CLASS, "friendPaths"))
+        val existingFriendPaths = friendPathsAnnotationInfo?.let {
+            from.firstOrNull { it1 -> it1.startsWith(it.value) }
+        }
+
+        val existingClasspaths = (obtainArgumentAnnotationInfo(classLoader, JVM_ARGUMENTS_CLASS, "classpath")
+            ?: obtainArgumentAnnotationInfo(classLoader, METADATA_ARGUMENTS_CLASS, "classpath"))?.let {
+            from.flatMapIndexed { index, s ->
+                if (s in setOf(it.value, it.shortName)) listOf(s, from[index + 1]) else emptyList()
+            }
         }
 
         // TODO(ychernyshev) Does the order of arguments required here?
-        val generalArguments = (from - existingPluginClasspaths - existingFriendPaths - existingClasspaths).filterNotNull().toMutableList()
-        val classpathArguments = existingClasspaths.ifNotEmpty {
+        val generalArguments = from.toMutableList().apply {
+            existingClasspaths?.also { removeAll(it) }
+            existingPluginClasspaths?.also { remove(it) }
+            existingFriendPaths?.also { remove(it) }
+        }
+        val classpathArguments = existingClasspaths?.ifNotEmpty {
             mutableListOf(existingClasspaths.first()).apply { addAll(existingClasspaths.last().split(File.pathSeparator)) }
         } ?: mutableListOf()
 
-        val pluginClasspaths = existingPluginClasspaths?.removePrefix(pluginClasspathsArgument.value)
-            ?.split(pluginClasspathsArgument.delimiter)
+        val pluginClasspaths = pluginClasspathsAnnotationInfo?.let { existingPluginClasspaths?.removePrefix(it.value) }
+            ?.split(pluginClasspathsAnnotationInfo.delimiter)
             .orEmpty()
             .toMutableList()
 
-        val friendPaths = existingFriendPaths?.removePrefix(friendPathsArgument.value)
-            ?.split(friendPathsArgument.delimiter)
+        val friendPaths = friendPathsAnnotationInfo?.let { existingFriendPaths?.removePrefix(it.value) }
+            ?.split(friendPathsAnnotationInfo.delimiter)
             .orEmpty()
             .toMutableList()
 
@@ -91,7 +101,7 @@ class RawToFlatCompilerArgumentsBucketConverter :
     }
 }
 
-class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
+class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper, override val classLoader: ClassLoader? = null) :
     CompilerArgumentsBucketConverter<FlatCompilerArgumentsBucket, CachedCompilerArgumentsBucket> {
     override fun convert(from: FlatCompilerArgumentsBucket): CachedCompilerArgumentsBucket {
         val generalArguments = from.generalArguments.map { mapper.cacheArgument(it) }.toMutableList()
@@ -102,10 +112,10 @@ class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgument
     }
 }
 
-class RawToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
+class RawToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper, override val classLoader: ClassLoader? = null) :
     CompilerArgumentsBucketConverter<RawCompilerArgumentsBucket, CachedCompilerArgumentsBucket> {
-    private val rawToFlatCompilerArgumentsBucketConverter by lazy { RawToFlatCompilerArgumentsBucketConverter() }
-    private val flatToCachedCompilerArgumentsBucketConverter by lazy { FlatToCachedCompilerArgumentsBucketConverter(mapper) }
+    private val rawToFlatCompilerArgumentsBucketConverter by lazy { RawToFlatCompilerArgumentsBucketConverter(classLoader) }
+    private val flatToCachedCompilerArgumentsBucketConverter by lazy { FlatToCachedCompilerArgumentsBucketConverter(mapper, classLoader) }
     override fun convert(from: RawCompilerArgumentsBucket): CachedCompilerArgumentsBucket =
         rawToFlatCompilerArgumentsBucketConverter.convert(from).let {
             flatToCachedCompilerArgumentsBucketConverter.convert(it)
