@@ -1078,7 +1078,7 @@ private class KotlinLikeDumper(val p: Printer, val options: KotlinLikeDumpOption
     }
 
     override fun visitStringConcatenation(expression: IrStringConcatenation, data: IrDeclaration?) {
-        // TODO escape char symbols, use triple quotes when possible, see IrTextTestCaseGenerated.Expressions#testStringTemplates
+        // TODO use triple quotes when possible?
         // TODO optionally each argument at a separate line, another option add a wrapping
         expression.arguments.forEachIndexed { i, e ->
             p(i > 0, " +")
@@ -1102,7 +1102,28 @@ private class KotlinLikeDumper(val p: Printer, val options: KotlinLikeDumpOption
             is IrConstKind.Double -> "" to "D"
         }
 
-        p.printWithNoIndent(prefix, expression.value ?: "null", postfix)
+        val value = expression.value.toString()
+        val safeValue = when (kind) {
+            is IrConstKind.Char -> value.escape('\'')
+            is IrConstKind.String -> value.escape('\"')
+            else -> value
+        }
+
+        p.printWithNoIndent(prefix, safeValue, postfix)
+    }
+
+    private fun String.escape(quote: Char): String {
+        return map {
+            when (it) {
+                '\b' -> "\\b"
+                '\t' -> "\\t"
+                '\n' -> "\\n"
+                '\r' -> "\\r"
+                '\\' -> "\\\\"
+                quote -> "\\" + quote
+                else -> if (!it.isISOControl()) it else "\\u" + it.toInt().toString(16).padStart(4, '0')
+            }
+        }.joinToString("")
     }
 
     override fun visitVararg(expression: IrVararg, data: IrDeclaration?) {
