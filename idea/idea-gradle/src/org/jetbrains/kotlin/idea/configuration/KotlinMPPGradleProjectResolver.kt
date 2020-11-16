@@ -275,19 +275,16 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
                 val cachedArgsInfo = ideModule.cachedCompilerArgumentsByCompilation[compilation] ?: continue
                 val mppMapper = ideProject.mppProjectCompilerArgumentsMapper ?: return
                 with(CachedToRawCompilerArgumentsBucketConverter(mppMapper)) {
-                    kotlinSourceSetInfo.compilerArgumentsInitializer = {
-                        convert(cachedArgsInfo.currentCompilerArgumentsBucket).let {
-                            createCompilerArguments(it, compilation.platform, isMultiplatform = true)
-                        }
+                    kotlinSourceSetInfo.compilerArguments = convert(cachedArgsInfo.currentCompilerArgumentsBucket).let {
+                        createCompilerArguments(it, compilation.platform, isMultiplatform = true)
                     }
-                    kotlinSourceSetInfo.defaultCompilerArgumentsInitializer = {
-                        convert(cachedArgsInfo.defaultCompilerArgumentsBucket).let {
-                            createCompilerArguments(it, compilation.platform, isMultiplatform = true)
-                        }
+
+                    kotlinSourceSetInfo.defaultCompilerArguments = convert(cachedArgsInfo.defaultCompilerArgumentsBucket).let {
+                        createCompilerArguments(it, compilation.platform, isMultiplatform = true)
                     }
-                    kotlinSourceSetInfo.dependencyClasspathInitializer = {
-                        cachedArgsInfo.dependencyClasspath.map { mppMapper.getArgument(it) }
-                    }
+
+                    kotlinSourceSetInfo.dependencyClasspath = cachedArgsInfo.dependencyClasspath.map { mppMapper.getArgument(it) }
+
 
                     if (compilation.platform == KotlinPlatform.JVM || compilation.platform == KotlinPlatform.ANDROID) {
                         ideModule.compilationDataByCompilation[compilation]?.targetCompatibility =
@@ -1065,7 +1062,7 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
                     getGradleModuleQualifiedName(resolverCtx, gradleModule, it)
                 }
                 //TODO(auskov): target flours are lost here
-                info.compilerArgumentsInitializer = {
+                info.compilerArguments =
                     createCompilerArguments(emptyList(), sourceSet.actualPlatforms.getSinglePlatform(), isMultiplatform = true).also {
                         it.languageVersion = languageSettings.languageVersion
                         it.apiVersion = languageSettings.apiVersion
@@ -1080,7 +1077,6 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
                         it.pluginClasspaths = languageSettings.compilerPluginClasspath.map(File::getPath).toTypedArray()
                         it.freeArgs = languageSettings.freeCompilerArgs.toMutableList()
                     }
-                }
             }
         }
 

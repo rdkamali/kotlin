@@ -9,7 +9,6 @@ dependencies {
     compileOnly(project(":idea"))
     compileOnly(project(":idea:idea-jvm"))
     compileOnly(project(":idea:idea-native"))
-    compile(project(":idea:kotlin-gradle-tooling"))
 
     compile(project(":compiler:frontend"))
     compile(project(":compiler:frontend.java"))
@@ -17,7 +16,6 @@ dependencies {
     compile(project(":js:js.frontend"))
 
     compile(project(":native:frontend.native"))
-    compile(project(":compiler:cli-common"))
 
     compileOnly(intellijDep())
     compileOnly(intellijPluginDep("gradle"))
@@ -28,7 +26,6 @@ dependencies {
     runtimeOnly(project(":kotlin-coroutines-experimental-compat"))
 
     compileOnly(project(":kotlin-gradle-statistics"))
-    implementation(project(":kotlin-reflect"))
 
     compileOnly(intellijPluginDep("java"))
     testCompileOnly(intellijPluginDep("java"))

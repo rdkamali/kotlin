@@ -189,32 +189,24 @@ class KotlinGradleModelBuilder : AbstractKotlinGradleModelBuilder() {
 
         val cachedArgumentsBySourceSet = LinkedHashMap<String, CachedArgsInfo>()
         val extraProperties = HashMap<String, KotlinTaskProperties>()
+        val converter = RawToCachedCompilerArgumentsBucketConverter(modelDetachableMapper)
 
         project.getAllTasks(false)[project]?.forEach { compileTask ->
             if (compileTask.javaClass.name !in kotlinCompileTaskClasses) return@forEach
 
             val sourceSetName = compileTask.getSourceSetName()
 
-            val currentCompilerArgumentsForBucket =
-                compileTask.getCompilerArgumentsForBucket("getSerializedCompilerArgumentsForBucket")?.let {
-                    FlatCompilerArgumentsBucket(it[0], it[1], it[2], it[3])
-                } ?: RawToFlatCompilerArgumentsBucketConverter().let {
-                    val currentArguments = compileTask.getCompilerArguments("getSerializedCompilerArguments")
-                        ?: compileTask.getCompilerArguments("getSerializedCompilerArgumentsIgnoreClasspathIssues")
-                        ?: emptyList()
-                    it.convert(currentArguments)
-                }
+            val currentCompilerArgumentsBucket = converter.convert(
+                compileTask.getCompilerArguments("getSerializedCompilerArguments")
+                    ?: compileTask.getCompilerArguments("getSerializedCompilerArgumentsIgnoreClasspathIssues")
+                    ?: emptyList()
+            )
 
-            val currentCompilerArgumentsBucket = FlatToCachedCompilerArgumentsBucketConverter(modelDetachableMapper)
-                .convert(currentCompilerArgumentsForBucket)
 
-            val defaultCompilerArgumentsForBucket =
-                compileTask.getCompilerArgumentsForBucket("getDefaultSerializedCompilerArgumentsForBucket")?.let {
-                    FlatCompilerArgumentsBucket(it[0], it[1], it[2], it[3])
-                } ?: RawToFlatCompilerArgumentsBucketConverter().convert(compileTask.getCompilerArguments("getDefaultSerializedCompilerArguments").orEmpty())
+            val defaultCompilerArgumentsBucket = converter.convert(
+                compileTask.getCompilerArguments("getDefaultSerializedCompilerArguments").orEmpty()
+            )
 
-            val defaultCompilerArgumentsBucket =
-                FlatToCachedCompilerArgumentsBucketConverter(modelDetachableMapper).convert(defaultCompilerArgumentsForBucket)
             val dependencyClasspath = compileTask.getDependencyClasspath()
             val dependencyClasspathCacheIds =
                 dependencyClasspath.map { modelDetachableMapper.cacheArgument(it) }

@@ -60,22 +60,13 @@ class KotlinSourceSetInfo @PropertyMapping("kotlinModule") constructor(val kotli
         get() = actualPlatforms.getSinglePlatform()
 
     @Transient
-    var defaultCompilerArgumentsInitializer: (() -> CommonCompilerArguments)? = null
-
-    val defaultCompilerArguments: CommonCompilerArguments?
-        get() = defaultCompilerArgumentsInitializer?.invoke()
+    var defaultCompilerArguments: CommonCompilerArguments? = null
 
     @Transient
-    var compilerArgumentsInitializer: (() -> CommonCompilerArguments)? = null
-
-    val compilerArguments: CommonCompilerArguments?
-        get() = compilerArgumentsInitializer?.invoke()
+    var compilerArguments: CommonCompilerArguments? = null
 
     @Transient
-    var dependencyClasspathInitializer: (() -> List<String>)? = null
-
-    val dependencyClasspath: List<String>
-        get() = dependencyClasspathInitializer?.invoke() ?: emptyList()
+    var dependencyClasspath: List<String> = emptyList()
 
     var isTestModule: Boolean = false
     var sourceSetIdsByName: MutableMap<String, String> = LinkedHashMap()

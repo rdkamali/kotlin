@@ -7,42 +7,41 @@ package org.jetbrains.kotlin.caching
 
 import java.io.Serializable
 
-typealias CachedArgumentIdType = Int
 typealias ClasspathArgumentCacheIdType = List<Int>
 typealias ClasspathArgumentsType = List<String>
 typealias RawCompilerArgumentsBucket = List<String>
 
 interface CompilerArgumentsBucket<T> : Serializable {
-    val generalArguments: T
-    val classpathParts: T
-    val pluginClasspaths: T
-    val friendPaths: T
+    val generalArguments: MutableList<T>
+    val classpathParts: MutableList<T>
+    val pluginClasspaths: MutableList<T>
+    val friendPaths: MutableList<T>
 }
 
 class CachedCompilerArgumentsBucket(
-    override val generalArguments: List<Int>,
-    override val classpathParts: List<Int>,
-    override val pluginClasspaths: List<Int>,
-    override val friendPaths: List<Int>
-) : CompilerArgumentsBucket<List<Int>> {
-    constructor(otherBucket: CachedCompilerArgumentsBucket) : this(
-        otherBucket.generalArguments.toList(),
-        otherBucket.classpathParts.toList(),
-        otherBucket.pluginClasspaths.toList(),
-        otherBucket.friendPaths.toList()
-    )
+    override val generalArguments: MutableList<Int> = mutableListOf(),
+    override val classpathParts: MutableList<Int> = mutableListOf(),
+    override val pluginClasspaths: MutableList<Int> = mutableListOf(),
+    override val friendPaths: MutableList<Int> = mutableListOf()
+) : CompilerArgumentsBucket<Int> {
+    constructor(otherBucket: CachedCompilerArgumentsBucket) : this() {
+        generalArguments.addAll(otherBucket.generalArguments)
+        classpathParts.addAll(otherBucket.classpathParts)
+        pluginClasspaths.addAll(otherBucket.pluginClasspaths)
+        friendPaths.addAll(otherBucket.friendPaths)
+    }
 }
 
 class FlatCompilerArgumentsBucket(
-    override val generalArguments: List<String>,
-    override val classpathParts: List<String>,
-    override val pluginClasspaths: List<String>,
-    override val friendPaths: List<String>
-) : CompilerArgumentsBucket<List<String>> {
-    constructor(otherBucket: FlatCompilerArgumentsBucket) : this(
-        otherBucket.generalArguments.toList(),
-        otherBucket.classpathParts.toList(),
-        otherBucket.pluginClasspaths.toList(),
-        otherBucket.friendPaths.toList()
-    )
+    override val generalArguments: MutableList<String> = mutableListOf(),
+    override val classpathParts: MutableList<String> = mutableListOf(),
+    override val pluginClasspaths: MutableList<String> = mutableListOf(),
+    override val friendPaths: MutableList<String> = mutableListOf()
+) : CompilerArgumentsBucket<String> {
+    constructor(otherBucket: FlatCompilerArgumentsBucket) : this() {
+        generalArguments.addAll(otherBucket.generalArguments)
+        classpathParts.addAll(otherBucket.classpathParts)
+        pluginClasspaths.addAll(otherBucket.pluginClasspaths)
+        friendPaths.addAll(otherBucket.friendPaths)
+    }
 }

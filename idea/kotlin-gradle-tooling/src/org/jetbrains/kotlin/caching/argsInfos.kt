@@ -10,19 +10,19 @@ import java.io.Serializable
 interface IArgsInfo<R, T : CompilerArgumentsBucket<R>> : Serializable {
     val currentCompilerArgumentsBucket: T
     val defaultCompilerArgumentsBucket: T
-    val dependencyClasspath: R
+    val dependencyClasspath: List<R>
 }
 
-interface FlatArgsInfo : IArgsInfo<ClasspathArgumentsType, FlatCompilerArgumentsBucket> {
+interface FlatArgsInfo : IArgsInfo<String, FlatCompilerArgumentsBucket> {
     override val currentCompilerArgumentsBucket: FlatCompilerArgumentsBucket
     override val defaultCompilerArgumentsBucket: FlatCompilerArgumentsBucket
     override val dependencyClasspath: ClasspathArgumentsType
 }
 
 class FlatArgsInfoImpl(
-    override val currentCompilerArgumentsBucket: FlatCompilerArgumentsBucket,
-    override val defaultCompilerArgumentsBucket: FlatCompilerArgumentsBucket,
-    override val dependencyClasspath: ClasspathArgumentsType
+    override val currentCompilerArgumentsBucket: FlatCompilerArgumentsBucket = FlatCompilerArgumentsBucket(),
+    override val defaultCompilerArgumentsBucket: FlatCompilerArgumentsBucket = FlatCompilerArgumentsBucket(),
+    override val dependencyClasspath: ClasspathArgumentsType = emptyList()
 ) : FlatArgsInfo {
     constructor(flatArgsInfo: FlatArgsInfo) : this(
         FlatCompilerArgumentsBucket(flatArgsInfo.currentCompilerArgumentsBucket),
@@ -31,16 +31,16 @@ class FlatArgsInfoImpl(
     )
 }
 
-interface CachedArgsInfo : IArgsInfo<ClasspathArgumentCacheIdType, CachedCompilerArgumentsBucket> {
+interface CachedArgsInfo : IArgsInfo<Int, CachedCompilerArgumentsBucket> {
     override val currentCompilerArgumentsBucket: CachedCompilerArgumentsBucket
     override val defaultCompilerArgumentsBucket: CachedCompilerArgumentsBucket
     override val dependencyClasspath: ClasspathArgumentCacheIdType
 }
 
 class CachedArgsInfoImpl(
-    override val currentCompilerArgumentsBucket: CachedCompilerArgumentsBucket,
-    override val defaultCompilerArgumentsBucket: CachedCompilerArgumentsBucket,
-    override val dependencyClasspath: ClasspathArgumentCacheIdType
+    override val currentCompilerArgumentsBucket: CachedCompilerArgumentsBucket = CachedCompilerArgumentsBucket(),
+    override val defaultCompilerArgumentsBucket: CachedCompilerArgumentsBucket = CachedCompilerArgumentsBucket(),
+    override val dependencyClasspath: ClasspathArgumentCacheIdType = emptyList()
 ) : CachedArgsInfo {
     constructor(cachedArgsInfo: CachedArgsInfo) : this(
         CachedCompilerArgumentsBucket(cachedArgsInfo.currentCompilerArgumentsBucket),
@@ -49,3 +49,10 @@ class CachedArgsInfoImpl(
     )
 }
 
+fun CachedArgsInfo.convertToFlat(mapper: ICompilerArgumentsMapper): FlatArgsInfo =
+    CachedToFlatCompilerArgumentsBucketConverter(mapper).let { cv ->
+        FlatArgsInfoImpl(
+            cv.convert(currentCompilerArgumentsBucket),
+            cv.convert(defaultCompilerArgumentsBucket),
+            dependencyClasspath.map { mapper.getArgument(it) })
+    }
