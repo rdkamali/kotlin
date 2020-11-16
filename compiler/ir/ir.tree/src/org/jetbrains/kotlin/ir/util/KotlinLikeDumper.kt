@@ -435,7 +435,7 @@ private class KotlinLikeDumper(val p: Printer, val options: KotlinLikeDumpOption
         p.printIndent()
 
         // TODO no tests, looks like there are no irText tests for isStatic flag
-        p(declaration.isStatic, commentBlockH("static"))
+        p(declaration.isStatic, commentBlock("static"))
         p.printWithNoIndent("init ")
         declaration.body.accept(this, declaration)
 
@@ -490,7 +490,7 @@ private class KotlinLikeDumper(val p: Printer, val options: KotlinLikeDumpOption
         declaration.printValueParametersWithNoIndent()
         declaration.printWhereClauseIfNeededWithNoIndent()
         p.printWithNoIndent(" ")
-        p(declaration.isPrimary, commentBlockH("primary"))
+        p(declaration.isPrimary, commentBlock("primary"))
         declaration.body?.accept(this, declaration)
         p.printlnWithNoIndent()
     }
@@ -1394,8 +1394,6 @@ private class KotlinLikeDumper(val p: Printer, val options: KotlinLikeDumpOption
     }
 
     private fun commentBlock(text: String) = "/* $text */"
-
-    private fun commentBlockH(text: String) = "/* $text */"
 
     private companion object {
         private const val INAPPLICABLE = false
