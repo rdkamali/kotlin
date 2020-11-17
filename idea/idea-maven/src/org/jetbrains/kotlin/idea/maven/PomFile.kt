@@ -116,7 +116,7 @@ class PomFile private constructor(private val xmlFile: XmlFile, val domModel: Ma
         dependency.classifier.stringValue = classifier
 
         if (scope != null && scope != MavenArtifactScope.COMPILE) {
-            dependency.scope.stringValue = scope.name.toLowerCase()
+            dependency.scope.stringValue = scope.name.toLowerCase(Locale.US)
         }
 
         if (optional) {
@@ -635,7 +635,8 @@ internal fun MavenDomDependencies.findDependencies(artifacts: List<MavenId>, sco
 }
 
 private fun MavenDomDependency.matches(artifact: MavenId, scope: MavenArtifactScope?) =
-    this.matches(artifact) && (this.scope.stringValue == scope?.name?.toLowerCase() || scope == null && this.scope.stringValue == "compile")
+    this.matches(artifact) &&
+            (this.scope.stringValue == scope?.name?.toLowerCase(Locale.US) || scope == null && this.scope.stringValue == "compile")
 
 private fun MavenDomArtifactCoordinates.matches(artifact: MavenId) =
     (artifact.groupId == null || groupId.stringValue == artifact.groupId)

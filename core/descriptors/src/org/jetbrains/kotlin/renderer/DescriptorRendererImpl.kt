@@ -494,7 +494,7 @@ internal class DescriptorRendererImpl(
 
     private fun renderModality(modality: Modality, builder: StringBuilder, defaultModality: Modality) {
         if (!renderDefaultModality && modality == defaultModality) return
-        renderModifier(builder, DescriptorRendererModifier.MODALITY in modifiers, modality.name.toLowerCase())
+        renderModifier(builder, DescriptorRendererModifier.MODALITY in modifiers, modality.name.toLowerCase(Locale.US))
     }
 
     private fun MemberDescriptor.implicitModalityWithoutExtensions(): Modality {
@@ -538,7 +538,7 @@ internal class DescriptorRendererImpl(
     private fun renderMemberKind(callableMember: CallableMemberDescriptor, builder: StringBuilder) {
         if (DescriptorRendererModifier.MEMBER_KIND !in modifiers) return
         if (verbose && callableMember.kind != CallableMemberDescriptor.Kind.DECLARATION) {
-            builder.append("/*").append(callableMember.kind.name.toLowerCase()).append("*/ ")
+            builder.append("/*").append(callableMember.kind.name.toLowerCase(Locale.US)).append("*/ ")
         }
     }
 

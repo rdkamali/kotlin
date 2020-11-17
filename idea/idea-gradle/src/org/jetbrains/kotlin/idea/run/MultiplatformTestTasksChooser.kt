@@ -56,7 +56,7 @@ class MultiplatformTestTasksChooser : TestTasksChooser() {
             return { it.targetName == targetName }
         }
 
-        val taskPrefix = targetName + parts[1].capitalize()
+        val taskPrefix = targetName + parts[1].capitalize(Locale.US)
 
         return { it.targetName == targetName && it.taskName.startsWith(taskPrefix) }
     }
@@ -119,7 +119,7 @@ class MultiplatformTestTasksChooser : TestTasksChooser() {
     }
 
     private fun getTaskNames(task: ExternalSystemRunTask): List<String> {
-        return listOf("clean" + task.taskName.capitalize(), task.taskName)
+        return listOf("clean" + task.taskName.capitalize(Locale.US), task.taskName)
     }
 }
 

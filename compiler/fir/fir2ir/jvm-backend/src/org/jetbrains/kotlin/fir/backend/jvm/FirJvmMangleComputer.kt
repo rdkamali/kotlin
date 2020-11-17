@@ -21,6 +21,8 @@ import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.visitors.FirVisitor
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
+import java.util.*
+import kotlin.collections.ArrayList
 
 open class FirJvmMangleComputer(
     private val builder: StringBuilder,
@@ -210,7 +212,7 @@ open class FirJvmMangleComputer(
                             is ConeStarProjection -> appendSignature(MangleConstant.STAR_MARK)
                             is ConeKotlinTypeProjection -> {
                                 if (arg.kind != ProjectionKind.INVARIANT) {
-                                    appendSignature(arg.kind.name.toLowerCase())
+                                    appendSignature(arg.kind.name.toLowerCase(Locale.US))
                                     appendSignature(MangleConstant.VARIANCE_SEPARATOR)
                                 }
 

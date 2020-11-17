@@ -43,6 +43,7 @@ import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.Variance.*
 import org.jetbrains.kotlin.utils.addToStdlib.runIf
+import java.util.*
 
 internal val JavaModifierListOwner.modality: Modality
     get() = when {
@@ -127,7 +128,7 @@ internal fun JavaType?.toConeKotlinTypeWithoutEnhancement(
             val primitiveType = type
             val kotlinPrimitiveName = when (val javaName = primitiveType?.typeName?.asString()) {
                 null -> "Unit"
-                else -> javaName.capitalize()
+                else -> javaName.capitalize(Locale.US)
             }
 
             val classId = StandardClassIds.byName(kotlinPrimitiveName)
@@ -181,7 +182,7 @@ private fun JavaArrayType.toConeKotlinTypeWithoutEnhancement(
             )
         }
     } else {
-        val javaComponentName = componentType.type?.typeName?.asString()?.capitalize() ?: error("Array of voids")
+        val javaComponentName = componentType.type?.typeName?.asString()?.capitalize(Locale.US) ?: error("Array of voids")
         val classId = StandardClassIds.byName(javaComponentName + "Array")
 
         if (forAnnotationValueParameter) {

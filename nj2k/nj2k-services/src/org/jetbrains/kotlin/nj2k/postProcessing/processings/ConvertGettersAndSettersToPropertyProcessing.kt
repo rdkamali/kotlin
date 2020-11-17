@@ -57,6 +57,7 @@ import org.jetbrains.kotlin.utils.addToStdlib.cast
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import org.jetbrains.kotlin.utils.mapToIndex
+import java.util.*
 
 class ConvertGettersAndSettersToPropertyProcessing : ElementsBasedPostProcessing() {
     override val options: PostProcessingOptions =
@@ -369,7 +370,7 @@ private class ConvertGettersAndSettersToPropertyStatefulProcessing(
         return declarations
             .asSequence()
             .mapNotNull { it.asPropertyAccessor() }
-            .groupBy { it.name.removePrefix("is").decapitalize() }
+            .groupBy { it.name.removePrefix("is").decapitalize(Locale.US) }
             .values
             .mapNotNull { group ->
                 val realGetter = group.firstIsInstanceOrNull<RealGetter>()

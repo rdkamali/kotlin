@@ -407,7 +407,7 @@ fun guessNewFileName(declarationsToMove: Collection<KtNamedDeclaration>): String
     val newFileName = representative?.run {
         if (containingKtFile.isScript()) "$name.kts" else "$name.${KotlinFileType.EXTENSION}"
     } ?: declarationsToMove.first().containingFile.name
-    return newFileName.capitalize()
+    return newFileName.capitalize(Locale.US)
 }
 
 // returns true if successful
