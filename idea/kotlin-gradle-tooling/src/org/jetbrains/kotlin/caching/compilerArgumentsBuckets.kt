@@ -12,36 +12,34 @@ typealias ClasspathArgumentsType = List<String>
 typealias RawCompilerArgumentsBucket = List<String>
 
 interface CompilerArgumentsBucket<T> : Serializable {
-    val generalArguments: MutableList<T>
-    val classpathParts: MutableList<T>
-    val pluginClasspaths: MutableList<T>
-    val friendPaths: MutableList<T>
+    val classpathParts: Pair<T, List<T>>?
+    val singleArguments: HashMap<T, T>
+    val multipleArguments: HashMap<T, List<T>>
+    val flagArguments: ArrayList<T>
 }
 
 class CachedCompilerArgumentsBucket(
-    override val generalArguments: MutableList<Int> = mutableListOf(),
-    override val classpathParts: MutableList<Int> = mutableListOf(),
-    override val pluginClasspaths: MutableList<Int> = mutableListOf(),
-    override val friendPaths: MutableList<Int> = mutableListOf()
+    override val classpathParts: Pair<Int, List<Int>>? = null,
+    override val singleArguments: HashMap<Int, Int> = hashMapOf(),
+    override val multipleArguments: HashMap<Int, List<Int>> = hashMapOf(),
+    override val flagArguments: ArrayList<Int> = arrayListOf()
 ) : CompilerArgumentsBucket<Int> {
-    constructor(otherBucket: CachedCompilerArgumentsBucket) : this() {
-        generalArguments.addAll(otherBucket.generalArguments)
-        classpathParts.addAll(otherBucket.classpathParts)
-        pluginClasspaths.addAll(otherBucket.pluginClasspaths)
-        friendPaths.addAll(otherBucket.friendPaths)
+    constructor(otherBucket: CachedCompilerArgumentsBucket) : this(otherBucket.classpathParts) {
+        singleArguments.putAll(otherBucket.singleArguments)
+        multipleArguments.putAll(otherBucket.multipleArguments)
+        flagArguments.addAll(otherBucket.flagArguments)
     }
 }
 
 class FlatCompilerArgumentsBucket(
-    override val generalArguments: MutableList<String> = mutableListOf(),
-    override val classpathParts: MutableList<String> = mutableListOf(),
-    override val pluginClasspaths: MutableList<String> = mutableListOf(),
-    override val friendPaths: MutableList<String> = mutableListOf()
+    override val classpathParts: Pair<String, List<String>>? = null,
+    override val singleArguments: HashMap<String, String> = hashMapOf(),
+    override val multipleArguments: HashMap<String, List<String>> = hashMapOf(),
+    override val flagArguments: ArrayList<String> = arrayListOf()
 ) : CompilerArgumentsBucket<String> {
-    constructor(otherBucket: FlatCompilerArgumentsBucket) : this() {
-        generalArguments.addAll(otherBucket.generalArguments)
-        classpathParts.addAll(otherBucket.classpathParts)
-        pluginClasspaths.addAll(otherBucket.pluginClasspaths)
-        friendPaths.addAll(otherBucket.friendPaths)
+    constructor(otherBucket: FlatCompilerArgumentsBucket) : this(otherBucket.classpathParts) {
+        singleArguments.putAll(otherBucket.singleArguments)
+        multipleArguments.putAll(otherBucket.multipleArguments)
+        flagArguments.addAll(otherBucket.flagArguments)
     }
 }

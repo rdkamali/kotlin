@@ -5,11 +5,6 @@
 
 package org.jetbrains.kotlin.caching
 
-import org.jetbrains.kotlin.cli.common.arguments.Argument
-import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
-import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
-import org.jetbrains.kotlin.utils.addIfNotNull
-import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 import java.io.File
 
 interface CompilerArgumentsBucketConverter<From, To> {
@@ -20,28 +15,61 @@ interface CompilerArgumentsBucketConverter<From, To> {
 class CachedToFlatCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper, override val classLoader: ClassLoader? = null) :
     CompilerArgumentsBucketConverter<CachedCompilerArgumentsBucket, FlatCompilerArgumentsBucket> {
     override fun convert(from: CachedCompilerArgumentsBucket): FlatCompilerArgumentsBucket {
-        val cachedGeneralArguments = from.generalArguments.map { mapper.getArgument(it) }.toMutableList()
-        val cachedClasspath = from.classpathParts.map { mapper.getArgument(it) }.toMutableList()
-        val cachedPluginClasspath = from.pluginClasspaths.map { mapper.getArgument(it) }.toMutableList()
-        val cachedFriendPaths = from.friendPaths.map { mapper.getArgument(it) }.toMutableList()
-        return FlatCompilerArgumentsBucket(cachedGeneralArguments, cachedClasspath, cachedPluginClasspath, cachedFriendPaths)
+        val flattenSingleArguments = from.singleArguments.entries.associate { (k, v) ->
+            mapper.getArgument(k) to mapper.getArgument(v)
+        }
+        val flattenMultipleArguments = from.multipleArguments.entries.associate { (k, v) ->
+            mapper.getArgument(k) to v.map { mapper.getArgument(it) }
+        }
+        val flattenFlagArguments = from.flagArguments.map { mapper.getArgument(it) }
+        val flattenClasspathParts = from.classpathParts?.let { (k, v) ->
+            mapper.getArgument(k) to v.map { mapper.getArgument(it) }
+        }
+        return FlatCompilerArgumentsBucket(flattenClasspathParts).apply {
+            singleArguments.putAll(flattenSingleArguments)
+            multipleArguments.putAll(flattenMultipleArguments)
+            flagArguments.addAll(flattenFlagArguments)
+        }
     }
 }
 
 class FlatToRawCompilerArgumentsBucketConverter(override val classLoader: ClassLoader? = null) :
     CompilerArgumentsBucketConverter<FlatCompilerArgumentsBucket, RawCompilerArgumentsBucket> {
     override fun convert(from: FlatCompilerArgumentsBucket): RawCompilerArgumentsBucket = mutableListOf<String>().apply {
-        addAll(from.generalArguments.toList())
-        from.classpathParts.ifNotEmpty {
-            this@apply.add(first())
-            this@apply.add(drop(1).joinToString(File.pathSeparator))
+        val dividedPropertiesWithArgumentAnnotationInfo =
+            DividedPropertiesWithArgumentAnnotationInfoManager(classLoader).dividedPropertiesWithArgumentAnnotationInfo
+
+        val singleArgumentAnnotationInfos = dividedPropertiesWithArgumentAnnotationInfo.singlePropertiesToArgumentAnnotation.values
+        from.singleArguments.entries.forEach { (k, v) ->
+            val argument = singleArgumentAnnotationInfos.first { it.isSuitableValue(k) }
+            if (argument.isAdvanced) {
+                this@apply.add("$k=$v")
+            } else {
+                this@apply.add(k)
+                this@apply.add(v)
+            }
         }
-        obtainArgumentAnnotationInfo(classLoader, COMMON_ARGUMENTS_CLASS, "pluginClasspaths")?.also {
-            from.pluginClasspaths.ifNotEmpty { add("${it.value}=${joinToString(it.delimiter)}") }
+
+        from.multipleArguments.entries.forEach { (k, v) ->
+            val argument = singleArgumentAnnotationInfos.first { it.isSuitableValue(k) }
+            val value = v.joinToString(argument.delimiter)
+            if (argument.isAdvanced) {
+                this@apply.add("$k=$value")
+            } else {
+                this@apply.add(k)
+                this@apply.add(value)
+            }
         }
-        (obtainArgumentAnnotationInfo(classLoader, JVM_ARGUMENTS_CLASS, "friendPaths")
-            ?: obtainArgumentAnnotationInfo(classLoader, METADATA_ARGUMENTS_CLASS, "friendPaths"))?.also {
-            from.friendPaths.ifNotEmpty { add("${it.value}=${joinToString(it.delimiter)}") }
+
+        addAll(from.flagArguments)
+
+        from.classpathParts?.also {
+            val classpathAnnotationInfo = dividedPropertiesWithArgumentAnnotationInfo.classpathPropertiesToArgumentAnnotation.values.first()
+            check(classpathAnnotationInfo.isSuitableValue(it.first)) {
+                "Unexpected classpath argument \"$it\"!"
+            }
+            this@apply.add(it.first)
+            this@apply.add(it.second.joinToString(File.pathSeparator))
         }
     }
 }
@@ -59,56 +87,59 @@ class CachedToRawCompilerArgumentsBucketConverter(val mapper: ICompilerArguments
 class RawToFlatCompilerArgumentsBucketConverter(override val classLoader: ClassLoader? = null) :
     CompilerArgumentsBucketConverter<RawCompilerArgumentsBucket, FlatCompilerArgumentsBucket> {
     override fun convert(from: RawCompilerArgumentsBucket): FlatCompilerArgumentsBucket {
-        val pluginClasspathsAnnotationInfo = obtainArgumentAnnotationInfo(classLoader, COMMON_ARGUMENTS_CLASS, "pluginClasspaths")
-        val existingPluginClasspaths = pluginClasspathsAnnotationInfo?.let {
-            from.firstOrNull { it1 -> it1.startsWith(it.value) }
+        val dividedPropertiesWithArgumentAnnotationInfo =
+            DividedPropertiesWithArgumentAnnotationInfoManager(classLoader).dividedPropertiesWithArgumentAnnotationInfo
+
+        val singlePropertiesToArgumentAnnotation = dividedPropertiesWithArgumentAnnotationInfo.singlePropertiesToArgumentAnnotation
+        val multiplePropertiesToArgumentAnnotation = dividedPropertiesWithArgumentAnnotationInfo.multiplePropertiesToArgumentAnnotation
+        val flagPropertiesToArgumentAnnotation = dividedPropertiesWithArgumentAnnotationInfo.flagPropertiesToArgumentAnnotation
+        val classpathPropertiesToArgumentAnnotation = dividedPropertiesWithArgumentAnnotationInfo.classpathPropertiesToArgumentAnnotation
+
+        val classpathArgumentAnnotation = classpathPropertiesToArgumentAnnotation.values.first()
+        val classpathParts = from.indexOfFirst { classpathArgumentAnnotation.isSuitableValue(it) }.takeIf { it != -1 }
+            ?.let { from[it] to from[it + 1].split(File.pathSeparator) }
+
+        fun ArgumentAnnotationInfo.processArgumentWithInfo(): Pair<String, String>? = if (isAdvanced) {
+            val found = from.find { isSuitableValue(it) }
+            val separate = found?.split('=')?.toTypedArray()
+            check(2 == separate?.size) { "Bad \"${value}\" compiler argument value: $found " }
+            separate?.let { it[0] to it[1] }
+        } else from.indexOfFirst { isSuitableValue(it) }.takeIf { it != -1 }?.let { from[it] to from[it + 1] }
+
+
+        val flattenSingleArguments = singlePropertiesToArgumentAnnotation.values.mapNotNull { it.processArgumentWithInfo() }.toMap()
+        val flattenMultipleArguments = multiplePropertiesToArgumentAnnotation.values.mapNotNull { info ->
+            info.processArgumentWithInfo()?.let { it.first to it.second.split(info.delimiter) }
         }
+        val flatFlagArguments = flagPropertiesToArgumentAnnotation.values.mapNotNull { info -> from.find { info.isSuitableValue(it) } }
 
-        val friendPathsAnnotationInfo = (obtainArgumentAnnotationInfo(classLoader, JVM_ARGUMENTS_CLASS, "friendPaths")
-            ?: obtainArgumentAnnotationInfo(classLoader, METADATA_ARGUMENTS_CLASS, "friendPaths"))
-        val existingFriendPaths = friendPathsAnnotationInfo?.let {
-            from.firstOrNull { it1 -> it1.startsWith(it.value) }
+        return FlatCompilerArgumentsBucket(classpathParts).apply {
+            singleArguments.putAll(flattenSingleArguments)
+            multipleArguments.putAll(flattenMultipleArguments)
+            flagArguments.addAll(flatFlagArguments)
         }
-
-        val existingClasspaths = (obtainArgumentAnnotationInfo(classLoader, JVM_ARGUMENTS_CLASS, "classpath")
-            ?: obtainArgumentAnnotationInfo(classLoader, METADATA_ARGUMENTS_CLASS, "classpath"))?.let {
-            from.flatMapIndexed { index, s ->
-                if (s in setOf(it.value, it.shortName)) listOf(s, from[index + 1]) else emptyList()
-            }
-        }
-
-        // TODO(ychernyshev) Does the order of arguments required here?
-        val generalArguments = from.toMutableList().apply {
-            existingClasspaths?.also { removeAll(it) }
-            existingPluginClasspaths?.also { remove(it) }
-            existingFriendPaths?.also { remove(it) }
-        }
-        val classpathArguments = existingClasspaths?.ifNotEmpty {
-            mutableListOf(existingClasspaths.first()).apply { addAll(existingClasspaths.last().split(File.pathSeparator)) }
-        } ?: mutableListOf()
-
-        val pluginClasspaths = pluginClasspathsAnnotationInfo?.let { existingPluginClasspaths?.removePrefix(it.value) }
-            ?.split(pluginClasspathsAnnotationInfo.delimiter)
-            .orEmpty()
-            .toMutableList()
-
-        val friendPaths = friendPathsAnnotationInfo?.let { existingFriendPaths?.removePrefix(it.value) }
-            ?.split(friendPathsAnnotationInfo.delimiter)
-            .orEmpty()
-            .toMutableList()
-
-        return FlatCompilerArgumentsBucket(generalArguments, classpathArguments, pluginClasspaths, friendPaths)
     }
 }
 
 class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper, override val classLoader: ClassLoader? = null) :
     CompilerArgumentsBucketConverter<FlatCompilerArgumentsBucket, CachedCompilerArgumentsBucket> {
     override fun convert(from: FlatCompilerArgumentsBucket): CachedCompilerArgumentsBucket {
-        val generalArguments = from.generalArguments.map { mapper.cacheArgument(it) }.toMutableList()
-        val classpathParts = from.classpathParts.map { mapper.cacheArgument(it) }.toMutableList()
-        val pluginClasspaths = from.pluginClasspaths.map { mapper.cacheArgument(it) }.toMutableList()
-        val friendPaths = from.friendPaths.map { mapper.cacheArgument(it) }.toMutableList()
-        return CachedCompilerArgumentsBucket(generalArguments, classpathParts, pluginClasspaths, friendPaths)
+        val cachedSingleArguments = from.singleArguments.entries.associate {
+            mapper.cacheArgument(it.key) to mapper.cacheArgument(it.value)
+        }
+        val cachedMultipleArguments = from.multipleArguments.entries.associate {
+            mapper.cacheArgument(it.key) to it.value.map { v -> mapper.cacheArgument(v) }
+        }
+        val cachedFlagArguments = from.flagArguments.map { mapper.cacheArgument(it) }
+        val cachedClasspathParts =
+            from.classpathParts?.let { mapper.cacheArgument(it.first) to it.second.map { v -> mapper.cacheArgument(v) } }
+
+        return CachedCompilerArgumentsBucket(cachedClasspathParts).apply {
+            singleArguments.putAll(cachedSingleArguments)
+            multipleArguments.putAll(cachedMultipleArguments)
+            flagArguments.addAll(cachedFlagArguments)
+        }
+
     }
 }
 

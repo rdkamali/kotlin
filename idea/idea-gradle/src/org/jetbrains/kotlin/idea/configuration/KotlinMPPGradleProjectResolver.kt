@@ -301,15 +301,11 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
             property: KProperty1<T, *>,
             mapper: CompilerArgumentsMapper
         ): String? {
-            val argumentAnno = property.annotations.firstOrNull { it is Argument } as? Argument ?: return null
+            val argumentAnnotation = property.annotations.firstOrNull { it is Argument } as? Argument ?: return null
+            val info = with(argumentAnnotation) { ArgumentAnnotationInfo(value, shortName, deprecatedName, delimiter, isAdvanced) }
             val cacheMapping = mapper.copyCache()
-            val propertyName = argumentAnno.value
-            return if (argumentAnno.isAdvanced) {
-                cacheMapping.values.firstOrNull { it.startsWith(propertyName) }?.removePrefix("${propertyName}=")
-            } else {
-                val key = cacheMapping.entries.firstOrNull { it.value == propertyName }?.key
-                generalArguments.indexOf(key).let { generalArguments.getOrNull(it + 1) }?.let { mapper.getArgument(it) }
-            }
+            val key = cacheMapping.entries.firstOrNull { info.isSuitableValue(it.value) }?.key
+            return singleArguments[key]?.let { mapper.getArgument(it) }
         }
 
         private fun KotlinMPPGradleModel.collectCachedCompilerArgumentByCompilation(ideModule: DataNode<ModuleData>) =
