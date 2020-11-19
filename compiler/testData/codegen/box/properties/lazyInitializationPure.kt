@@ -18,7 +18,7 @@ val e = d
 // FILE: main.kt
 
 fun box(): String {
-    d
+    // Get only e to initialize all properties in file
     e
     return if (
         js("a") === "A" &&
