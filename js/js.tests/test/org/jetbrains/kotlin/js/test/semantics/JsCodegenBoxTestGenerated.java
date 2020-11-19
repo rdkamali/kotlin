@@ -17724,6 +17724,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             runTest("compiler/testData/codegen/box/properties/lazyInitializationOrder.kt");
         }
 
+        @TestMetadata("lazyInitializationSplitPerModule.kt")
+        public void testLazyInitializationSplitPerModule() throws Exception {
+            runTest("compiler/testData/codegen/box/properties/lazyInitializationSplitPerModule.kt");
+        }
+
         @TestMetadata("primitiveOverrideDefaultAccessor.kt")
         public void testPrimitiveOverrideDefaultAccessor() throws Exception {
             runTest("compiler/testData/codegen/box/properties/primitiveOverrideDefaultAccessor.kt");
