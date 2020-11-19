@@ -41,7 +41,7 @@ class PropertyLazyInitLowering(
         get() = context.fileToInitialisationFuns
 
     val fileToPurenessInitializers
-        get() = context.fileToPurenessInitializers
+        get() = context.fileToInitializerPureness
 
     override fun lower(irBody: IrBody, container: IrDeclaration) {
         if (context.configuration[PROPERTY_LAZY_INITIALISATION] != true) {
@@ -50,8 +50,6 @@ class PropertyLazyInitLowering(
 
         if (container !is IrSimpleFunction && container !is IrField && container !is IrProperty)
             return
-
-        if (!container.isTopLevel) return
 
         val file = container.parent as? IrFile
             ?: return
@@ -218,7 +216,7 @@ class RemoveInitializersForLazyProperties(
 ) : DeclarationTransformer {
 
     val fileToPurenessInitializers
-        get() = context.fileToPurenessInitializers
+        get() = context.fileToInitializerPureness
 
     override fun transformFlat(declaration: IrDeclaration): List<IrDeclaration>? {
         if (context.configuration[PROPERTY_LAZY_INITIALISATION] != true) {
