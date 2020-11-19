@@ -25012,6 +25012,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/valueClasses/identityComparisonWithValueClasses.kt");
             }
 
+            @TestMetadata("jvmInlineApplicability.kt")
+            public void testJvmInlineApplicability() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/valueClasses/jvmInlineApplicability.kt");
+            }
+
             @TestMetadata("lateinitValueClasses.kt")
             public void testLateinitValueClasses() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/valueClasses/lateinitValueClasses.kt");

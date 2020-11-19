@@ -13,7 +13,7 @@ import org.jetbrains.kotlin.types.TypeUtils
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
-val JVM_INLINE_ANNOTATION = FqName("kotlin.JvmInline")
+val JVM_INLINE_ANNOTATION_FQ_NAME = FqName("kotlin.JvmInline")
 
 fun ClassDescriptor.underlyingRepresentation(): ValueParameterDescriptor? {
     if (!isInlineClass()) return null
@@ -21,7 +21,7 @@ fun ClassDescriptor.underlyingRepresentation(): ValueParameterDescriptor? {
 }
 
 fun DeclarationDescriptor.isInlineClass() = this is ClassDescriptor &&
-        (isInline || isValue && annotations.hasAnnotation(JVM_INLINE_ANNOTATION))
+        (isInline || isValue && annotations.hasAnnotation(JVM_INLINE_ANNOTATION_FQ_NAME))
 
 fun KotlinType.unsubstitutedUnderlyingParameter(): ValueParameterDescriptor? {
     return constructor.declarationDescriptor.safeAs<ClassDescriptor>()?.underlyingRepresentation()
