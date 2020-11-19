@@ -6,18 +6,22 @@
 package org.jetbrains.kotlin.resolve
 
 import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.TypeSubstitutor
 import org.jetbrains.kotlin.types.TypeUtils
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
+val JVM_INLINE_ANNOTATION = FqName("kotlin.JvmInline")
+
 fun ClassDescriptor.underlyingRepresentation(): ValueParameterDescriptor? {
-    if (!isInline) return null
+    if (!isInlineClass()) return null
     return unsubstitutedPrimaryConstructor?.valueParameters?.singleOrNull()
 }
 
-fun DeclarationDescriptor.isInlineClass() = this is ClassDescriptor && this.isInline
+fun DeclarationDescriptor.isInlineClass() = this is ClassDescriptor &&
+        (isInline || isValue && annotations.hasAnnotation(JVM_INLINE_ANNOTATION))
 
 fun KotlinType.unsubstitutedUnderlyingParameter(): ValueParameterDescriptor? {
     return constructor.declarationDescriptor.safeAs<ClassDescriptor>()?.underlyingRepresentation()
