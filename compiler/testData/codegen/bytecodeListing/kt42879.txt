@@ -1,3 +1,4 @@
+@kotlin.JvmInline
 @kotlin.Metadata
 public final class A {
     // source: 'kt42879.kt'

@@ -1,3 +1,4 @@
+@kotlin.JvmInline
 @kotlin.Metadata
 public final class Test {
     // source: 'constructorsWithDefaultParameterValues.kt'
