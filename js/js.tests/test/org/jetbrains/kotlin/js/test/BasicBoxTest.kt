@@ -131,7 +131,7 @@ abstract class BasicBoxTest(
         val skipDceDriven = SKIP_DCE_DRIVEN.matcher(fileContent).find()
         val splitPerModule = SPLIT_PER_MODULE.matcher(fileContent).find()
 
-        val propertyLazyInitialization = PROPERTY_LAZY_INITIALISATION.matcher(fileContent).find()
+        val propertyLazyInitialization = PROPERTY_LAZY_INITIALIZATION.matcher(fileContent).find()
 
         TestFileFactoryImpl(coroutinesPackage).use { testFactory ->
             val inputFiles = TestFiles.createTestFiles(
@@ -420,7 +420,7 @@ abstract class BasicBoxTest(
         skipDceDriven: Boolean,
         splitPerModule: Boolean,
         errorIgnorancePolicy: ErrorTolerancePolicy,
-        propertyLazyInitialisation: Boolean,
+        propertyLazyInitialization: Boolean,
     ) {
         val kotlinFiles =  module.files.filter { it.fileName.endsWith(".kt") }
         val testFiles = kotlinFiles.map { it.fileName }
@@ -447,7 +447,7 @@ abstract class BasicBoxTest(
             incrementalData = null,
             expectActualLinker = expectActualLinker,
             errorIgnorancePolicy,
-            propertyLazyInitialisation
+            propertyLazyInitialization
         )
         val outputFile = File(outputFileName)
         val dceOutputFile = File(dceOutputFileName)
@@ -514,7 +514,7 @@ abstract class BasicBoxTest(
             incrementalData,
             expectActualLinker,
             ErrorTolerancePolicy.DEFAULT,
-            propertyLazyInitialisation = false
+            propertyLazyInitialization = false
         )
         val recompiledOutputFile = File(outputFile.parentFile, outputFile.nameWithoutExtension + "-recompiled.js")
 
@@ -740,7 +740,7 @@ abstract class BasicBoxTest(
         incrementalData: IncrementalData?,
         expectActualLinker: Boolean,
         errorIgnorancePolicy: ErrorTolerancePolicy,
-        propertyLazyInitialisation: Boolean,
+        propertyLazyInitialization: Boolean,
     ): JsConfig {
         val configuration = environment.configuration.copy()
 
@@ -764,7 +764,7 @@ abstract class BasicBoxTest(
         configuration.put(JSConfigurationKeys.MODULE_KIND, module.moduleKind)
         configuration.put(JSConfigurationKeys.TARGET, EcmaVersion.v5)
         configuration.put(JSConfigurationKeys.ERROR_TOLERANCE_POLICY, errorIgnorancePolicy)
-        configuration.put(JSConfigurationKeys.PROPERTY_LAZY_INITIALISATION, propertyLazyInitialisation)
+        configuration.put(JSConfigurationKeys.PROPERTY_LAZY_INITIALIZATION, propertyLazyInitialization)
 
         if (errorIgnorancePolicy.allowErrors) {
             configuration.put(JSConfigurationKeys.DEVELOPER_MODE, true)
@@ -998,7 +998,7 @@ abstract class BasicBoxTest(
 
         private val ERROR_POLICY_PATTERN = Pattern.compile("^// *ERROR_POLICY: *(.+)$", Pattern.MULTILINE)
 
-        private val PROPERTY_LAZY_INITIALISATION = Pattern.compile("^// *PROPERTY_LAZY_INITIALISATION *$", Pattern.MULTILINE)
+        private val PROPERTY_LAZY_INITIALIZATION = Pattern.compile("^// *PROPERTY_LAZY_INITIALIZATION *$", Pattern.MULTILINE)
 
         @JvmStatic
         protected val runTestInNashorn = getBoolean("kotlin.js.useNashorn")

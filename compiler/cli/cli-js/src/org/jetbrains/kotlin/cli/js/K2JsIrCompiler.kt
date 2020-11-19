@@ -160,8 +160,8 @@ class K2JsIrCompiler : CLICompiler<K2JSCompilerArguments>() {
         )
 
         configurationJs.put(
-            JSConfigurationKeys.PROPERTY_LAZY_INITIALISATION,
-            arguments.irPropertyLazyInitialisation
+            JSConfigurationKeys.PROPERTY_LAZY_INITIALIZATION,
+            arguments.irPropertyLazyInitialization
         )
 
         // TODO: in this method at least 3 different compiler configurations are used (original, env.configuration, jsConfig.configuration)
