@@ -447,7 +447,6 @@ abstract class BasicBoxTest(
             incrementalData = null,
             expectActualLinker = expectActualLinker,
             errorIgnorancePolicy,
-            propertyLazyInitialization
         )
         val outputFile = File(outputFileName)
         val dceOutputFile = File(dceOutputFileName)
@@ -455,8 +454,23 @@ abstract class BasicBoxTest(
 
         val incrementalData = IncrementalData()
         translateFiles(
-            psiFiles.map(TranslationUnit::SourceFile), outputFile, dceOutputFile, pirOutputFile, config, outputPrefixFile, outputPostfixFile,
-            mainCallParameters, incrementalData, remap, testPackage, testFunction, needsFullIrRuntime, isMainModule, skipDceDriven, splitPerModule
+            psiFiles.map(TranslationUnit::SourceFile),
+            outputFile,
+            dceOutputFile,
+            pirOutputFile,
+            config,
+            outputPrefixFile,
+            outputPostfixFile,
+            mainCallParameters,
+            incrementalData,
+            remap,
+            testPackage,
+            testFunction,
+            needsFullIrRuntime,
+            isMainModule,
+            skipDceDriven,
+            splitPerModule,
+            propertyLazyInitialization,
         )
 
         if (incrementalCompilationChecksEnabled && module.hasFilesToRecompile) {
@@ -514,13 +528,27 @@ abstract class BasicBoxTest(
             incrementalData,
             expectActualLinker,
             ErrorTolerancePolicy.DEFAULT,
-            propertyLazyInitialization = false
         )
         val recompiledOutputFile = File(outputFile.parentFile, outputFile.nameWithoutExtension + "-recompiled.js")
 
         translateFiles(
-            translationUnits, recompiledOutputFile, recompiledOutputFile, recompiledOutputFile, recompiledConfig, outputPrefixFile, outputPostfixFile,
-            mainCallParameters, incrementalData, remap, testPackage, testFunction, needsFullIrRuntime, false, true, false
+            translationUnits,
+            recompiledOutputFile,
+            recompiledOutputFile,
+            recompiledOutputFile,
+            recompiledConfig,
+            outputPrefixFile,
+            outputPostfixFile,
+            mainCallParameters,
+            incrementalData,
+            remap,
+            testPackage,
+            testFunction,
+            needsFullIrRuntime,
+            isMainModule = false,
+            skipDceDriven = true,
+            splitPerModule = false,
+            propertyLazyInitialization = false,
         )
 
         val originalOutput = FileUtil.loadFile(outputFile)
@@ -594,7 +622,8 @@ abstract class BasicBoxTest(
         needsFullIrRuntime: Boolean,
         isMainModule: Boolean,
         skipDceDriven: Boolean,
-        splitPerModule: Boolean
+        splitPerModule: Boolean,
+        propertyLazyInitialization: Boolean,
     ) {
         val translator = K2JSTranslator(config, false)
         val translationResult = translator.translateUnits(ExceptionThrowingReporter, units, mainCallParameters)
@@ -740,7 +769,6 @@ abstract class BasicBoxTest(
         incrementalData: IncrementalData?,
         expectActualLinker: Boolean,
         errorIgnorancePolicy: ErrorTolerancePolicy,
-        propertyLazyInitialization: Boolean,
     ): JsConfig {
         val configuration = environment.configuration.copy()
 
@@ -764,7 +792,6 @@ abstract class BasicBoxTest(
         configuration.put(JSConfigurationKeys.MODULE_KIND, module.moduleKind)
         configuration.put(JSConfigurationKeys.TARGET, EcmaVersion.v5)
         configuration.put(JSConfigurationKeys.ERROR_TOLERANCE_POLICY, errorIgnorancePolicy)
-        configuration.put(JSConfigurationKeys.PROPERTY_LAZY_INITIALIZATION, propertyLazyInitialization)
 
         if (errorIgnorancePolicy.allowErrors) {
             configuration.put(JSConfigurationKeys.DEVELOPER_MODE, true)
