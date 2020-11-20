@@ -155,20 +155,25 @@ class IrElementToJsExpressionTransformer : BaseIrElementToJsNodeTransformer<JsEx
         } else {
             when {
                 klass.isEffectivelyExternal() -> {
+                    val refForExternalClass = context.getRefForExternalClass(klass)
                     val varargParameterIndex = expression.symbol.owner.varargParameterIndex()
-                    val argumentsAsSingleArray = argumentsAsSingleArray(
-                        JsNullLiteral(),
-                        arguments,
-                        varargParameterIndex
-                    )
-                    JsNew(
-                        JsInvocation(
-                            JsNameRef("apply", JsNameRef("bind", JsNameRef("Function"))),
-                            context.getRefForExternalClass(klass),
-                            argumentsAsSingleArray
-                        ),
-                        emptyList()
-                    )
+                    if (varargParameterIndex == -1) {
+                        JsNew(refForExternalClass, arguments)
+                    } else {
+                        val argumentsAsSingleArray = argumentsAsSingleArray(
+                            JsNullLiteral(),
+                            arguments,
+                            varargParameterIndex
+                        )
+                        JsNew(
+                            JsInvocation(
+                                JsNameRef("apply", JsNameRef("bind", JsNameRef("Function"))),
+                                refForExternalClass,
+                                argumentsAsSingleArray
+                            ),
+                            emptyList()
+                        )
+                    }
                 }
                 else -> {
                     val ref = context.getNameForClass(klass).makeRef()

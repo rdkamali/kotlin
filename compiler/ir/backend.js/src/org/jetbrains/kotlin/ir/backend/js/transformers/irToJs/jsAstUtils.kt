@@ -221,11 +221,13 @@ private fun argumentsToArrays(
 fun IrFunction.varargParameterIndex() = valueParameters.indexOfFirst { it.varargElementType != null }
 
 fun translateCallArguments(
-    expression: IrMemberAccessExpression<*>,
+    expression: IrMemberAccessExpression<IrFunctionSymbol>,
     context: JsGenerationContext,
     transformer: IrElementToJsExpressionTransformer,
 ): List<JsExpression> {
     val size = expression.valueArgumentsCount
+
+    val varargParameterIndex = expression.symbol.owner.realOverrideTarget.varargParameterIndex()
 
     val validWithNullArgs = expression.validWithNullArgs()
     val arguments = (0 until size)
@@ -237,6 +239,16 @@ fun translateCallArguments(
             if (result == null) {
                 assert(validWithNullArgs)
             }
+        }
+        .mapIndexed { index, result ->
+            val isEmptyExternalVararg = validWithNullArgs &&
+                    varargParameterIndex == index &&
+                    result is JsArrayLiteral &&
+                    result.expressions.isEmpty()
+
+            if (isEmptyExternalVararg) {
+                null
+            } else result
         }
         .dropLastWhile { it == null }
         .map { it ?: JsPrefixOperation(JsUnaryOperator.VOID, JsIntLiteral(1)) }
