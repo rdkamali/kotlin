@@ -20,8 +20,9 @@ fun ClassDescriptor.underlyingRepresentation(): ValueParameterDescriptor? {
     return unsubstitutedPrimaryConstructor?.valueParameters?.singleOrNull()
 }
 
-fun DeclarationDescriptor.isInlineClass() = this is ClassDescriptor &&
-        (isInline || isValue && annotations.hasAnnotation(JVM_INLINE_ANNOTATION_FQ_NAME))
+// FIXME: DeserializedClassDescriptor in reflection do not have @JvmInline annotation, that we
+// FIXME: would like to check as well.
+fun DeclarationDescriptor.isInlineClass() = this is ClassDescriptor && (isInline || isValue)
 
 fun KotlinType.unsubstitutedUnderlyingParameter(): ValueParameterDescriptor? {
     return constructor.declarationDescriptor.safeAs<ClassDescriptor>()?.underlyingRepresentation()
