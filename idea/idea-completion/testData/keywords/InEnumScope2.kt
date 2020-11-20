@@ -20,6 +20,7 @@ enum class Test {
 // EXIST:  sealed class
 // EXIST:  lateinit var
 // EXIST:  data class
+// EXIST:  value
 // EXIST:  inline
 // EXIST:  tailrec
 // EXIST:  external
