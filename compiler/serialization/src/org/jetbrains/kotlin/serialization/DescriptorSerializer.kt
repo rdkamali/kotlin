@@ -177,10 +177,6 @@ class DescriptorSerializer private constructor(
         builder.addVersionRequirement(
             writeLanguageVersionRequirement(LanguageFeature.InlineClasses, versionRequirementTable)
         )
-
-        if (classDescriptor.isValue) {
-            writeVersionRequirement(1, 4, 30, ProtoBuf.VersionRequirement.VersionKind.COMPILER_VERSION, versionRequirementTable)
-        }
     }
 
     private fun ClassDescriptor.hasInlineClassTypesInSignature(): Boolean {
