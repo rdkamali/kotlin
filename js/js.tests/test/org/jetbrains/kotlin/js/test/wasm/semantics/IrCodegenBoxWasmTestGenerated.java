@@ -11115,11 +11115,6 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/properties/kt9603.kt");
         }
 
-        @TestMetadata("lazyInitializationSplitPerModule.kt")
-        public void testLazyInitializationSplitPerModule() throws Exception {
-            runTest("compiler/testData/codegen/box/properties/lazyInitializationSplitPerModule.kt");
-        }
-
         @TestMetadata("primitiveOverrideDefaultAccessor.kt")
         public void testPrimitiveOverrideDefaultAccessor() throws Exception {
             runTest("compiler/testData/codegen/box/properties/primitiveOverrideDefaultAccessor.kt");

@@ -17609,26 +17609,6 @@ public class IrJsCodegenBoxES6TestGenerated extends AbstractIrJsCodegenBoxES6Tes
             runTest("compiler/testData/codegen/box/properties/kt9603.kt");
         }
 
-        @TestMetadata("lazyInitialization.kt")
-        public void testLazyInitialization() throws Exception {
-            runTest("compiler/testData/codegen/box/properties/lazyInitialization.kt");
-        }
-
-        @TestMetadata("lazyInitializationOrder.kt")
-        public void testLazyInitializationOrder() throws Exception {
-            runTest("compiler/testData/codegen/box/properties/lazyInitializationOrder.kt");
-        }
-
-        @TestMetadata("lazyInitializationPure.kt")
-        public void testLazyInitializationPure() throws Exception {
-            runTest("compiler/testData/codegen/box/properties/lazyInitializationPure.kt");
-        }
-
-        @TestMetadata("lazyInitializationSplitPerModule.kt")
-        public void testLazyInitializationSplitPerModule() throws Exception {
-            runTest("compiler/testData/codegen/box/properties/lazyInitializationSplitPerModule.kt");
-        }
-
         @TestMetadata("primitiveOverrideDefaultAccessor.kt")
         public void testPrimitiveOverrideDefaultAccessor() throws Exception {
             runTest("compiler/testData/codegen/box/properties/primitiveOverrideDefaultAccessor.kt");
