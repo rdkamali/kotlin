@@ -15,7 +15,7 @@ fun box(): String {
     if (ctorCallArgs.size != 0) return "fail: $ctorCallArgs arguments"
 
     FieldPath(1)
-    if (ctorCallArgs.size != 1) return "fail1: $ctorCallArgs arguments"
+    if (ctorCallArgs.size != 1 || js("typeof ctorCallArgs[0] !== 'number'")) return "fail1: $ctorCallArgs arguments"
 
     FieldPath(2, "p0", "p1", "p3")
     if (ctorCallArgs.size != 4 || js("typeof ctorCallArgs[0] !== 'number'") || js("typeof ctorCallArgs[1] !== 'string'"))
