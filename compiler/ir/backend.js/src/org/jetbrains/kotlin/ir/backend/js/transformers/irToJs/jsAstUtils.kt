@@ -187,35 +187,43 @@ internal fun argumentsAsSingleArray(
     additionalReceiver: JsExpression?,
     arguments: List<JsExpression>,
     varargParameterIndex: Int?
-): JsInvocation {
+): JsExpression {
     // External vararg arguments should be represented in JS as multiple "plain" arguments (opposed to arrays in Kotlin)
     // We are using `Function.prototype.apply` function to pass all arguments as a single array.
     // For this purpose are concatenating non-vararg arguments with vararg.
-    val arrayConcat = JsNameRef("concat", JsArrayLiteral())
-
-    return JsInvocation(
-        arrayConcat,
-        listOfNotNull(additionalReceiver) + argumentsToArrays(arguments, varargParameterIndex)
-    )
-}
-
-private fun argumentsToArrays(
-    arguments: List<JsExpression>,
-    varargParameterIndex: Int?
-): List<JsExpression> {
-    val arraySliceCall = JsNameRef("call", JsNameRef("slice", JsArrayLiteral()))
-    return arguments.mapIndexed { index, argument ->
-        when (index) {
-
-            // Call `Array.prototype.slice` on vararg arguments in order to convert array-like objects into proper arrays
-            // TODO: Optimize for proper arrays
-            varargParameterIndex -> JsInvocation(arraySliceCall, argument)
-
-            // TODO: Don't wrap non-array-like arguments with array literal
-            // TODO: Wrap adjacent non-vararg arguments in a single array literal
-            else -> JsArrayLiteral(listOf(argument))
+    var varargArgument: JsExpression? = null
+    val additionalSize = additionalReceiver?.let { 1 } ?: 0
+    // size + 1 because arguments size + potential additionalReceiver
+    val nonVarArgs: MutableList<JsExpression> =
+        ArrayList<JsExpression>(arguments.size + additionalSize).apply {
+            additionalReceiver?.let { add(it) }
         }
-    }
+
+    arguments
+        .forEachIndexed { index, argument ->
+            when (index) {
+
+                // Call `Array.prototype.slice` on vararg arguments in order to convert array-like objects into proper arrays
+                varargParameterIndex -> {
+                    varargArgument = if (argument is JsArrayLiteral) {
+                        argument
+                    } else {
+                        val arraySliceCall = JsNameRef("call", JsNameRef("slice", JsArrayLiteral()))
+                        JsInvocation(arraySliceCall, argument)
+                    }
+                }
+
+                else -> nonVarArgs.add(argument)
+            }
+        }
+
+    val nonVarArgArrayLiteral = JsArrayLiteral(nonVarArgs)
+    return varargArgument?.let {
+        JsInvocation(
+            JsNameRef("concat", nonVarArgArrayLiteral),
+            it
+        )
+    } ?: nonVarArgArrayLiteral
 }
 
 fun IrFunction.varargParameterIndex() = valueParameters.indexOfFirst { it.varargElementType != null }
