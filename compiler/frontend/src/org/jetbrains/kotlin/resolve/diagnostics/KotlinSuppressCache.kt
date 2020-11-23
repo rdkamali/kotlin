@@ -115,7 +115,7 @@ abstract class KotlinSuppressCache {
         val suppressor = getOrCreateSuppressor(annotated)
         if (suppressor.isSuppressed(suppressionKey, severity)) return true
 
-        val annotatedAbove = KtStubbedPsiUtil.getPsiOrStubParent(annotated, KtAnnotated::class.java, true) ?: return false
+        val annotatedAbove = KtStubbedPsiUtil.getPsiOrStubParent(suppressor.annotatedElement, KtAnnotated::class.java, true) ?: return false
 
         val suppressed = isSuppressedByAnnotated(suppressionKey, severity, annotatedAbove, debugDepth + 1)
         val suppressorAbove = suppressors[annotatedAbove]
